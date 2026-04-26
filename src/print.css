@@ -1,0 +1,65 @@
+.print-only-header {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: landscape;
+    margin: 5mm;
+  }
+
+  /* Cache tout ce qui n'est pas le planning */
+  .no-print, nav, .notes-section {
+    display: none !important;
+  }
+
+  .print-only-header {
+    display: block;
+    text-align: center;
+    margin-bottom: 10px;
+  }
+
+  .print-title {
+    font-size: 18px;
+    font-weight: bold;
+  }
+
+  /* Force le planning à tenir sur une seule page */
+  .printable-area {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 98vh !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-start !important;
+    page-break-inside: avoid !important;
+    transform: scale(1); /* On laisse le navigateur gérer l'ajustement */
+  }
+
+  .overflow-x-auto {
+    overflow: visible !important;
+  }
+
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    table-layout: fixed !important;
+  }
+
+  th, td {
+    border: 1px solid #333 !important;
+    font-size: 8pt !important;
+    padding: 1px !important;
+    height: auto !important;
+  }
+
+  /* Pour les plannings avec beaucoup d'employés, on réduit encore un peu */
+  .calendar-view table th, .calendar-view table td {
+    font-size: 7pt !important;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
