@@ -4,30 +4,22 @@ import { fr } from 'date-fns/locale';
 import { getContrastingTextColor } from '../utils/colorUtils';
 import { loadEmployees } from '../data/employeeData';
 import type { Employee } from '../data/employeeTypes';
-import { addMonths, subMonths, startOfWeek, endOfWeek, eachDayOfInterval, addDays, getDay, getISOWeek, startOfMonth, endOfMonth } from 'date-fns';
+import { addMonths, subMonths, getISOWeek, startOfMonth, endOfMonth } from 'date-fns';
 import type { Shift } from '../data/shifts';
-import { getShiftById, SHIFT_OPTIONS } from '../data/shifts';
+import { SHIFT_OPTIONS } from '../data/shifts';
 import { ShiftSelectionModal } from './ShiftSelectionModal';
 import Notes from './Notes';
-import { dispatchScheduleChangedEvent, useScheduleData } from '../hooks/useScheduleData';
+import { useScheduleData } from '../hooks/useScheduleData';
 import { supabaseService } from '../supabaseService';
 import { useAuth } from '../hooks/useAuth';
-import { validateSchedules, ValidationNote } from '../utils/validationUtils';
-
-const serializeSchedule = (scheduleMap: Map<string, Map<string, { primaryShift: Shift | null, overlays: Shift[] }>>): Record<string, Record<string, { primaryShift: Shift | null, overlays: Shift[] }>> => {
-  const obj: Record<string, Record<string, { primaryShift: Shift | null, overlays: Shift[] }>> = {};
-  scheduleMap.forEach((dateMap, employeeId) => {
-    obj[employeeId] = {};
-    dateMap.forEach((data, date) => { obj[employeeId][date] = data; });
-  });
-  return obj;
-};
+import { validateSchedules } from '../utils/validationUtils';
+import type { ValidationNote } from '../utils/validationUtils';
 
 const Calendar: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHolidays }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [schedule, setSchedule] = useState<Map<string, Map<string, { primaryShift: Shift | null, overlays: Shift[] }>>>(new Map());
   const { generalSchedule, cuisinierSchedule, veilleurSchedule } = useScheduleData();
-  const { isAdmin, user } = useAuth();
+  const { isAdmin } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -38,8 +30,6 @@ const Calendar: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHolidays })
   const [visibleEmployeeIds, setVisibleEmployeeIds] = useState<Set<string>>(new Set());
   const [validationErrors, setValidationErrors] = useState<ValidationNote[]>([]);
   const [showValidation, setShowValidation] = useState(false);
-
-  const [columnVisibility, setColumnVisibility] = useState({ reinforcement: false, interim: false, intern: false });
 
   useEffect(() => {
     const employees = loadEmployees();
@@ -91,8 +81,8 @@ const Calendar: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHolidays })
         const empDaySchedule = new Map(newSchedule.get(selectedEmployeeId)!);
         const current = empDaySchedule.get(selectedDate) || { primaryShift: null, overlays: [] };
         if (shift.isOverlay) {
-          const exists = current.overlays.findIndex(o => o.id === shift.id);
-          const overlays = exists > -1 ? current.overlays.filter(o => o.id !== shift.id) : [...current.overlays, shift];
+          const exists = current.overlays.findIndex((o: Shift) => o.id === shift.id);
+          const overlays = exists > -1 ? current.overlays.filter((o: Shift) => o.id !== shift.id) : [...current.overlays, shift];
           updatedDayData = { ...current, overlays };
         } else {
           updatedDayData = { ...current, primaryShift: shift };
@@ -117,13 +107,19 @@ const Calendar: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHolidays })
     }
   };
 
+  const handleSelectCustomShift = (customTime: string) => {
+    if (selectedEmployeeId && selectedDate) {
+      const customShift: Shift = { id: 'custom', name: customTime, time: customTime, type: 'custom', color: '#CCCCCC', textColor: '#333333' };
+      handleSelectShift(customShift);
+    }
+  };
+
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
   const daysInMonth = getDaysInMonth(year, month);
 
   const filteredEmployees = allEmployees.filter(emp => {
-    const isTypeVisible = (emp.type === 'reinforcement' && columnVisibility.reinforcement) || (emp.type === 'interim' && columnVisibility.interim) || (emp.type === 'intern' && columnVisibility.intern) || (emp.type === 'general');
-    return isTypeVisible && visibleEmployeeIds.has(emp.id);
+    return (emp.type === 'general' || emp.type === 'reinforcement' || emp.type === 'interim' || emp.type === 'intern') && visibleEmployeeIds.has(emp.id);
   }).sort((a, b) => (a.order || 0) - (b.order || 0));
 
   return (
@@ -148,7 +144,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHolidays })
       {showValidation && validationErrors.length > 0 && (
         <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 no-print">
           <div className="flex justify-between items-start">
-            <h3 className="text-red-800 font-bold mb-2">Erreurs détectées (Manques de personnel) :</h3>
+            <h3 className="text-red-800 font-bold mb-2">Erreurs détectées :</h3>
             <button onClick={() => setShowValidation(false)} className="text-red-500 text-xs underline">Fermer</button>
           </div>
           <ul className="text-sm text-red-700 list-disc list-inside">
@@ -159,14 +155,14 @@ const Calendar: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHolidays })
 
       {showValidation && validationErrors.length === 0 && (
         <div className="mb-4 p-4 bg-green-50 border-l-4 border-green-500 no-print">
-          <p className="text-green-800 font-bold">✅ Aucune erreur détectée. La continuité de service est assurée !</p>
+          <p className="text-green-800 font-bold">✅ Aucune erreur détectée.</p>
         </div>
       )}
 
       <div className="flex flex-wrap items-center gap-4 mb-4 no-print bg-gray-50 p-3 rounded border border-gray-200">
         <span className="font-semibold text-blue-800">Filtrer Colonnes :</span>
         <div className="flex flex-wrap gap-2">
-          {allEmployees.filter(e => e.type === 'general').map(emp => (
+          {allEmployees.map(emp => (
             <label key={emp.id} className="flex items-center space-x-1 bg-white px-2 py-1 rounded border text-sm cursor-pointer hover:bg-blue-50">
               <input type="checkbox" checked={visibleEmployeeIds.has(emp.id)} onChange={() => toggleEmployeeVisibility(emp.id)} className="rounded" />
               <span>{emp.name}</span>
@@ -200,7 +196,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHolidays })
                   )}
                   <td className={`py-2 px-4 border w-40 font-semibold ${hasError ? 'bg-red-500 text-white' : ''}`}>
                     {format(day, 'dd EEEE', { locale: fr })}
-                    {hasError && <span className="ml-1" title="Manque de personnel !">⚠️</span>}
+                    {schoolHolidays.has(formattedDay) && <span className="ml-1">⭐</span>}
                   </td>
                   {filteredEmployees.map((employee) => {
                     const data = schedule.get(employee.id)?.get(formattedDay);
@@ -222,7 +218,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHolidays })
       </div>
 
       {isModalOpen && selectedEmployeeId && selectedDate && (
-        <ShiftSelectionModal key={modalKey} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSelectShift={(s) => { handleSelectShift(s); setIsModalOpen(false); }} onClearShift={handleClearShift} employeeId={selectedEmployeeId} date={selectedDate} x={modalX} y={modalY} customShiftOptions={SHIFT_OPTIONS.filter(s => !s.isOverlay)} currentPrimaryShift={schedule.get(selectedEmployeeId)?.get(selectedDate)?.primaryShift} currentOverlays={schedule.get(selectedEmployeeId)?.get(selectedDate)?.overlays} />
+        <ShiftSelectionModal key={modalKey} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSelectShift={(s) => { handleSelectShift(s); setIsModalOpen(false); }} onClearShift={handleClearShift} onSelectCustomShift={handleSelectCustomShift} employeeId={selectedEmployeeId} date={selectedDate} x={modalX} y={modalY} currentPrimaryShift={schedule.get(selectedEmployeeId)?.get(selectedDate)?.primaryShift} currentOverlays={schedule.get(selectedEmployeeId)?.get(selectedDate)?.overlays} />
       )}
       <Notes currentDate={currentDate} context="general" />
     </div>

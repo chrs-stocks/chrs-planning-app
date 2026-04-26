@@ -66,8 +66,6 @@ export const supabaseService = {
       return new Map();
     }
 
-    const scheduleMap = new Map<string, Map<string, { primaryShift: Shift | null, overlays: Shift[] }>>();
-
     // We need getShiftById here, but we'll import it where needed or pass it.
     // For now, let's assume we handle the mapping outside or import it.
     // To avoid circular dependencies, it's better to just return the raw data and let the hook handle it.

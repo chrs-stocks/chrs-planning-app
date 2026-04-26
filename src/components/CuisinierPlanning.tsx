@@ -87,6 +87,13 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
     }
   };
 
+  const handleSelectCustomShift = (customTime: string) => {
+    if (selectedEmployeeId && selectedDate) {
+      const customShift: Shift = { id: 'custom', name: customTime, time: customTime, type: 'custom', color: '#CCCCCC', textColor: '#333333' };
+      handleSelectShift(customShift, false);
+    }
+  };
+
   const cuisiniers = allEmployees.filter(emp => emp.type === 'cuisinier' && visibleEmployeeIds.has(emp.id));
   const days = getDaysInMonth(currentDate.getFullYear(), currentDate.getMonth());
   const weeks: { [key: number]: number } = {};
@@ -168,7 +175,7 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
         </table>
       </div>
       {isModalOpen && selectedEmployeeId && selectedDate && (
-        <ShiftSelectionModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSelectShift={handleSelectShift} onClearShift={handleClearShift} employeeId={selectedEmployeeId} date={selectedDate} x={modalX} y={modalY} customShiftOptions={SHIFT_OPTIONS.filter(s => s.type.startsWith('cuisinier') || s.isOverlay)} currentPrimaryShift={schedule.get(selectedEmployeeId)?.get(selectedDate)?.primaryShift} currentOverlays={schedule.get(selectedEmployeeId)?.get(selectedDate)?.overlays} />
+        <ShiftSelectionModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSelectShift={handleSelectShift} onClearShift={handleClearShift} onSelectCustomShift={handleSelectCustomShift} employeeId={selectedEmployeeId} date={selectedDate} x={modalX} y={modalY} customShiftOptions={SHIFT_OPTIONS.filter(s => s.type.startsWith('cuisinier') || s.isOverlay)} currentPrimaryShift={schedule.get(selectedEmployeeId)?.get(selectedDate)?.primaryShift} currentOverlays={schedule.get(selectedEmployeeId)?.get(selectedDate)?.overlays} />
       )}
       <Notes currentDate={currentDate} context="cuisiniers" />
     </div>
