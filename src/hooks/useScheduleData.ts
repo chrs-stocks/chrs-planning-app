@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import type { Shift } from '../data/shifts';
 import { getShiftById } from '../data/shifts';
 import { supabaseService } from '../supabaseService';
+import type { SupabaseSchedule } from '../supabaseService';
 
 // Define types for the schedule data
 type GeneralSchedule = Map<string, Map<string, { primaryShift: Shift | null, overlays: Shift[] }>>;
@@ -53,7 +54,7 @@ const deserializeCuisinierVeilleurSchedule = (scheduleObj: Record<string, Record
 };
 
 // Helper to convert Supabase rows back to the Map structure
-const mapSupabaseToSchedule = (rows: any[]): CuisinierVeilleurSchedule => {
+const mapSupabaseToSchedule = (rows: SupabaseSchedule[]): CuisinierVeilleurSchedule => {
   const map = new Map<string, Map<string, { primaryShift: Shift | null, overlays: Shift[] }>>();
   rows.forEach(row => {
     if (!map.has(row.employee_id)) {
@@ -61,8 +62,8 @@ const mapSupabaseToSchedule = (rows: any[]): CuisinierVeilleurSchedule => {
     }
     const dateMap = map.get(row.employee_id)!;
     dateMap.set(row.date, {
-      primaryShift: getShiftById(row.primary_shift_id) ?? null,
-      overlays: (row.overlays || []).map((o: any) => typeof o === 'string' ? getShiftById(o) : o).filter(Boolean)
+      primaryShift: row.primary_shift_id ? (getShiftById(row.primary_shift_id) || null) : null,
+      overlays: (row.overlays || []).map((o: string | Shift) => typeof o === 'string' ? getShiftById(o) : o).filter((o): o is Shift => !!o)
     });
   });
   return map;
@@ -101,10 +102,10 @@ export const useScheduleData = () => {
         supabaseService.getSchedules('astreinte')
       ]);
 
-      if (gen && (gen as any).length > 0) setGeneralSchedule(mapSupabaseToSchedule(gen as any));
-      if (cuis && (cuis as any).length > 0) setCuisinierSchedule(mapSupabaseToSchedule(cuis as any));
-      if (veil && (veil as any).length > 0) setVeilleurSchedule(mapSupabaseToSchedule(veil as any));
-      if (astr && (astr as any).length > 0) setAstreinteSchedule(mapSupabaseToSchedule(astr as any));
+      if (gen && gen.length > 0) setGeneralSchedule(mapSupabaseToSchedule(gen));
+      if (cuis && cuis.length > 0) setCuisinierSchedule(mapSupabaseToSchedule(cuis));
+      if (veil && veil.length > 0) setVeilleurSchedule(mapSupabaseToSchedule(veil));
+      if (astr && astr.length > 0) setAstreinteSchedule(mapSupabaseToSchedule(astr));
       
       // We don't necessarily want to overwrite localStorage here unless we are sure Supabase is the truth
     } catch (error) {

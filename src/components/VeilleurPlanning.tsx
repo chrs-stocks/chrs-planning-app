@@ -60,7 +60,7 @@ const VeilleurPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHol
 
   const handleSelectShift = async (shift: Shift, isOverlay: boolean, interimInitials?: string) => {
     if (selectedEmployeeId && selectedDate) {
-      let updatedDayData: any = null;
+      let finalData: { primaryShift: Shift | null, overlays: Shift[] } | null = null;
       setSchedule((prevSchedule) => {
         const newSchedule = new Map(prevSchedule);
         if (!newSchedule.has(selectedEmployeeId)) newSchedule.set(selectedEmployeeId, new Map());
@@ -68,18 +68,25 @@ const VeilleurPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHol
         const currentDayData = employeeDayData.get(selectedDate) || { primaryShift: null, overlays: [] };
         let shiftToStore = { ...shift };
         if (selectedEmployeeId === 'veilleur-interim' && interimInitials) shiftToStore = { ...shiftToStore, interimInitials };
+        
+        let updated: { primaryShift: Shift | null, overlays: Shift[] };
         if (isOverlay) {
           const existingOverlayIndex = currentDayData.overlays.findIndex((o: Shift) => o.id === shiftToStore.id);
           const updatedOverlays = existingOverlayIndex > -1 ? currentDayData.overlays.filter((o: Shift) => o.id !== shiftToStore.id) : [...currentDayData.overlays, shiftToStore];
-          updatedDayData = { ...currentDayData, overlays: updatedOverlays };
+          updated = { ...currentDayData, overlays: updatedOverlays };
         } else {
-          updatedDayData = { ...currentDayData, primaryShift: shiftToStore };
+          updated = { ...currentDayData, primaryShift: shiftToStore };
         }
-        employeeDayData.set(selectedDate, updatedDayData);
+        
+        finalData = updated;
+        employeeDayData.set(selectedDate, updated);
         newSchedule.set(selectedEmployeeId, employeeDayData);
         return newSchedule;
       });
-      if (updatedDayData) await supabaseService.saveSchedule(selectedEmployeeId, selectedDate, 'veilleur', updatedDayData.primaryShift, updatedDayData.overlays);
+      if (finalData) {
+        const data = finalData as { primaryShift: Shift | null, overlays: Shift[] };
+        await supabaseService.saveSchedule(selectedEmployeeId, selectedDate, 'veilleur', data.primaryShift, data.overlays);
+      }
     }
   };
 
@@ -178,7 +185,7 @@ const VeilleurPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHol
                   let displayTime = employee.id === 'veilleur-interim' && primaryShift?.interimInitials ? primaryShift.interimInitials : primaryShift ? primaryShift.name : '';
                   const overlayCodes = overlays.map(o => o.shortCode).filter(Boolean).join(' ');
                   if (overlayCodes) displayTime = `${displayTime}<br />${overlayCodes}`.trim();
-                  let displayColor = primaryShift ? employee.color : isFrenchPublicHoliday(day) ? '#FFDDE0' : '#FFFFFF';
+                  const displayColor = primaryShift ? employee.color : isFrenchPublicHoliday(day) ? '#FFDDE0' : '#FFFFFF';
                   return (
                     <td key={formattedDay} className={`py-2 px-1 border cursor-pointer text-center text-xs ${overlays.length > 0 ? 'hatch-background' : ''}`} style={{ backgroundColor: displayColor, color: getContrastingTextColor(displayColor), height: '35px' }} onClick={(event) => handleCellClick(employee.id, formattedDay, event)} dangerouslySetInnerHTML={{ __html: displayTime }}></td>
                   );

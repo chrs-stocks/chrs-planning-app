@@ -73,7 +73,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHolidays })
 
   const handleSelectShift = async (shift: Shift) => {
     if (selectedEmployeeId && selectedDate) {
-      let updatedDayData: any = null;
+      let updatedDayData: { primaryShift: Shift | null, overlays: Shift[] } | null = null;
       setSchedule((prevSchedule) => {
         const newSchedule = new Map(prevSchedule);
         if (!newSchedule.has(selectedEmployeeId)) newSchedule.set(selectedEmployeeId, new Map());
@@ -90,7 +90,10 @@ const Calendar: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHolidays })
         newSchedule.set(selectedEmployeeId, empDaySchedule);
         return newSchedule;
       });
-      if (updatedDayData) await supabaseService.saveSchedule(selectedEmployeeId, selectedDate, 'general', updatedDayData.primaryShift, updatedDayData.overlays);
+      if (updatedDayData) {
+        const data = updatedDayData as { primaryShift: Shift | null, overlays: Shift[] };
+        await supabaseService.saveSchedule(selectedEmployeeId, selectedDate, 'general', data.primaryShift, data.overlays);
+      }
     }
   };
 

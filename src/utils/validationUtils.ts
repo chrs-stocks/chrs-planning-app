@@ -1,10 +1,6 @@
 import type { Employee } from '../data/employeeTypes';
 import type { Shift } from '../data/shifts';
 import { eachDayOfInterval, format } from 'date-fns';
-<<<<<<< HEAD
-=======
-import { isFrenchPublicHoliday } from '../utils/dateUtils';
->>>>>>> 576f8dba72b87aa5084dbd6c5cd7ffe1b1458e38
 
 // Define types for the schedule data
 type GeneralSchedule = Map<string, Map<string, { primaryShift: Shift | null, overlays: Shift[] }>>;

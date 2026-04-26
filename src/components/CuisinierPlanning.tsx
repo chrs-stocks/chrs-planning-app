@@ -60,24 +60,31 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
 
   const handleSelectShift = async (shift: Shift, isOverlay: boolean) => {
     if (selectedEmployeeId && selectedDate) {
-      let updatedDayData: any = null;
+      let finalData: { primaryShift: Shift | null, overlays: Shift[] } | null = null;
       setSchedule((prevSchedule) => {
         const newSchedule = new Map(prevSchedule);
         if (!newSchedule.has(selectedEmployeeId)) newSchedule.set(selectedEmployeeId, new Map());
         const empDayData = new Map(newSchedule.get(selectedEmployeeId)!);
         const cur = empDayData.get(selectedDate) || { primaryShift: null, overlays: [] };
+        
+        let updated: { primaryShift: Shift | null, overlays: Shift[] };
         if (isOverlay) {
           const idx = cur.overlays.findIndex((o: Shift) => o.id === shift.id);
           const overlays = idx > -1 ? cur.overlays.filter((o: Shift) => o.id !== shift.id) : [...cur.overlays, shift];
-          updatedDayData = { ...cur, overlays };
+          updated = { ...cur, overlays };
         } else {
-          updatedDayData = { ...cur, primaryShift: shift };
+          updated = { ...cur, primaryShift: shift };
         }
-        empDayData.set(selectedDate, updatedDayData);
+        
+        finalData = updated;
+        empDayData.set(selectedDate, updated);
         newSchedule.set(selectedEmployeeId, empDayData);
         return newSchedule;
       });
-      if (updatedDayData) await supabaseService.saveSchedule(selectedEmployeeId, selectedDate, 'cuisinier', updatedDayData.primaryShift, updatedDayData.overlays);
+      if (finalData) {
+        const data = finalData as { primaryShift: Shift | null, overlays: Shift[] };
+        await supabaseService.saveSchedule(selectedEmployeeId, selectedDate, 'cuisinier', data.primaryShift, data.overlays);
+      }
     }
   };
 
@@ -171,7 +178,7 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
                   let displayTime = primaryShift ? primaryShift.name : '';
                   const overlayCodes = overlays.map(o => o.shortCode).filter(Boolean).join(' ');
                   if (overlayCodes) displayTime = `${displayTime}<br />${overlayCodes}`.trim();
-                  let displayColor = primaryShift ? employee.color : isFrenchPublicHoliday(day) ? '#FFDDE0' : '#FFFFFF';
+                  const displayColor = primaryShift ? employee.color : isFrenchPublicHoliday(day) ? '#FFDDE0' : '#FFFFFF';
                   return (
                     <td key={formattedDay} className={`py-2 px-1 border cursor-pointer text-center text-xs ${overlays.length > 0 ? 'hatch-background' : ''}`} style={{ backgroundColor: displayColor, color: getContrastingTextColor(displayColor), height: '35px' }} onClick={(event) => handleCellClick(employee.id, formattedDay, event)} dangerouslySetInnerHTML={{ __html: displayTime }}></td>
                   );
