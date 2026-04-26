@@ -5,10 +5,10 @@ import { addMonths, subMonths, getISOWeek } from 'date-fns';
 import type { Shift } from '../data/shifts';
 import { getContrastingTextColor } from '../utils/colorUtils';
 import { ShiftSelectionModal } from './ShiftSelectionModal';
-import { getShiftById, SHIFT_OPTIONS } from '../data/shifts';
+import { SHIFT_OPTIONS } from '../data/shifts';
 import Notes from './Notes';
 import { loadEmployees } from '../data/employeeData';
-import { dispatchScheduleChangedEvent, useScheduleData } from '../hooks/useScheduleData';
+import { useScheduleData } from '../hooks/useScheduleData';
 import { supabaseService } from '../supabaseService';
 import { useAuth } from '../hooks/useAuth';
 import type { Employee } from '../data/employeeTypes';
@@ -17,7 +17,7 @@ const VeilleurPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHol
   const [currentDate, setCurrentDate] = useState(new Date());
   const [schedule, setSchedule] = useState<Map<string, Map<string, { primaryShift: Shift | null, overlays: Shift[] }>>>(new Map());
   const { veilleurSchedule } = useScheduleData();
-  const { isAdmin, user } = useAuth();
+  const { isAdmin } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
@@ -33,13 +33,12 @@ const VeilleurPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHol
   }, []);
 
   useEffect(() => {
-    if (veilleurSchedule) setSchedule(veilleurSchedule);
+    if (veilleurSchedule && veilleurSchedule.size > 0) setSchedule(veilleurSchedule);
   }, [veilleurSchedule]);
 
   const toggleEmployeeVisibility = (id: string) => {
     const newSet = new Set(visibleEmployeeIds);
-    if (newSet.has(id)) newSet.delete(id);
-    else newSet.add(id);
+    if (newSet.has(id)) newSet.delete(id); else newSet.add(id);
     setVisibleEmployeeIds(newSet);
   };
 
@@ -53,6 +52,12 @@ const VeilleurPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHol
     setIsModalOpen(true);
   };
 
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedEmployeeId(null);
+    setSelectedDate(null);
+  };
+
   const handleSelectShift = async (shift: Shift, isOverlay: boolean, interimInitials?: string) => {
     if (selectedEmployeeId && selectedDate) {
       let updatedDayData: any = null;
@@ -64,8 +69,8 @@ const VeilleurPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHol
         let shiftToStore = { ...shift };
         if (selectedEmployeeId === 'veilleur-interim' && interimInitials) shiftToStore = { ...shiftToStore, interimInitials };
         if (isOverlay) {
-          const existingOverlayIndex = currentDayData.overlays.findIndex(o => o.id === shiftToStore.id);
-          const updatedOverlays = existingOverlayIndex > -1 ? currentDayData.overlays.filter(o => o.id !== shiftToStore.id) : [...currentDayData.overlays, shiftToStore];
+          const existingOverlayIndex = currentDayData.overlays.findIndex((o: Shift) => o.id === shiftToStore.id);
+          const updatedOverlays = existingOverlayIndex > -1 ? currentDayData.overlays.filter((o: Shift) => o.id !== shiftToStore.id) : [...currentDayData.overlays, shiftToStore];
           updatedDayData = { ...currentDayData, overlays: updatedOverlays };
         } else {
           updatedDayData = { ...currentDayData, primaryShift: shiftToStore };
@@ -83,17 +88,26 @@ const VeilleurPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHol
       setSchedule((prevSchedule) => {
         const newSchedule = new Map(prevSchedule);
         const empMap = newSchedule.get(selectedEmployeeId);
-        if (empMap) {
-          empMap.delete(selectedDate);
-          if (empMap.size === 0) newSchedule.delete(selectedEmployeeId);
-        }
+        if (empMap) { empMap.delete(selectedDate); if (empMap.size === 0) newSchedule.delete(selectedEmployeeId); }
         return newSchedule;
       });
       await supabaseService.deleteSchedule(selectedEmployeeId, selectedDate, 'veilleur');
     }
   };
 
-  const veilleurs = allEmployees.filter(emp => emp.type === 'veilleur' && visibleEmployeeIds.has(emp.id));
+  const handleSelectCustomShift = (customTime: string, interimInitials?: string) => {
+    if (selectedEmployeeId && selectedDate) {
+      const customShift: Shift = { id: 'custom', name: customTime, time: customTime, type: 'custom', color: '#CCCCCC', textColor: '#333333' };
+      handleSelectShift(customShift, false, interimInitials);
+    }
+  };
+
+  const veilleurs = allEmployees.filter(emp => emp.type === 'veilleur' && visibleEmployeeIds.has(emp.id)).sort((a, b) => {
+    if (a.id === 'veilleur-interim') return 1;
+    if (b.id === 'veilleur-interim') return -1;
+    return 0;
+  });
+
   const days = getDaysInMonth(currentDate.getFullYear(), currentDate.getMonth());
   const weeks: { [key: number]: number } = {};
   days.forEach(day => { const w = getISOWeek(day); weeks[w] = (weeks[w] || 0) + 1; });
@@ -139,17 +153,16 @@ const VeilleurPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHol
             <tr>
               <th className="py-2 px-4 border text-left w-40"></th>
               {days.map(day => (
-                <th key={format(day, 'yyyy-MM-dd')} className="py-2 px-1 border text-center text-xs" style={{ backgroundColor: day.getDay() === 0 ? '#E0E0E0' : 'transparent' }}>
-                  {['D', 'L', 'M', 'M', 'J', 'V', 'S'][day.getDay()]}
-                </th>
+                <th key={format(day, 'yyyy-MM-dd')} className="py-2 px-1 border text-center text-xs" style={{ backgroundColor: day.getDay() === 0 ? '#E0E0E0' : 'transparent' }}>{['D', 'L', 'M', 'M', 'J', 'V', 'S'][day.getDay()]}</th>
               ))}
             </tr>
             <tr>
               <th className="py-2 px-4 border text-left w-40"></th>
               {days.map(day => {
+                const formattedDay = format(day, 'yyyy-MM-dd');
                 const isHoliday = isFrenchPublicHoliday(day);
-                const isSchoolHol = schoolHolidays.has(format(day, 'yyyy-MM-dd'));
-                return <th key={format(day, 'yyyy-MM-dd')} className="py-2 px-1 border text-center text-xs" style={{ backgroundColor: isHoliday ? '#FFDDE0' : isSchoolHol ? '#FFFACD' : 'transparent' }}>{format(day, 'd')}</th>;
+                const isSchoolHol = schoolHolidays.has(formattedDay);
+                return <th key={formattedDay} className="py-2 px-1 border text-center text-xs" style={{ backgroundColor: isHoliday ? '#FFDDE0' : isSchoolHol ? '#FFFACD' : 'transparent' }}>{format(day, 'd')}</th>;
               })}
             </tr>
           </thead>
@@ -176,7 +189,7 @@ const VeilleurPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHol
         </table>
       </div>
       {isModalOpen && selectedEmployeeId && selectedDate && (
-        <ShiftSelectionModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSelectShift={handleSelectShift} onClearShift={handleClearShift} employeeId={selectedEmployeeId} date={selectedDate} x={modalX} y={modalY} customShiftOptions={SHIFT_OPTIONS.filter(s => s.type.startsWith('veilleur') || s.isOverlay)} currentPrimaryShift={schedule.get(selectedEmployeeId)?.get(selectedDate)?.primaryShift} currentOverlays={schedule.get(selectedEmployeeId)?.get(selectedDate)?.overlays} />
+        <ShiftSelectionModal isOpen={isModalOpen} onClose={handleCloseModal} onSelectShift={handleSelectShift} onClearShift={handleClearShift} onSelectCustomShift={handleSelectCustomShift} employeeId={selectedEmployeeId} date={selectedDate} x={modalX} y={modalY} customShiftOptions={SHIFT_OPTIONS.filter(s => s.type.startsWith('veilleur') || s.isOverlay)} currentPrimaryShift={schedule.get(selectedEmployeeId)?.get(selectedDate)?.primaryShift} currentOverlays={schedule.get(selectedEmployeeId)?.get(selectedDate)?.overlays} />
       )}
       <Notes currentDate={currentDate} context="veilleurs" />
     </div>

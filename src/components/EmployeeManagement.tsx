@@ -8,16 +8,12 @@ const EmployeeManagement: React.FC = () => {
     name: '', type: 'general', color: '#CCCCCC', workingHoursPercentage: 100, order: 0 
   });
   const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const init = async () => {
-      setLoading(true);
-      setEmployees(loadEmployees());
+      loadEmployees();
       const synced = await syncEmployeesWithSupabase();
-      // Tri par ordre avant affichage
       setEmployees(synced.sort((a, b) => (a.order || 0) - (b.order || 0)));
-      setLoading(false);
     };
     init();
   }, []);
@@ -84,9 +80,9 @@ const EmployeeManagement: React.FC = () => {
             <option value="interim">Intérim</option>
             <option value="intern">Stagiaire</option>
           </select>
-          <input name="color" type="color" value={newEmployee.color} onChange={handleInputChange} className="h-10 w-full border rounded cursor-pointer" title="Couleur dans le planning" />
-          <input name="workingHoursPercentage" type="number" value={newEmployee.workingHoursPercentage} onChange={handleInputChange} placeholder="% Heures contrat" className="p-2 border rounded" title="Pourcentage d'heures du contrat" />
-          <input name="order" type="number" value={newEmployee.order} onChange={handleInputChange} placeholder="Position (Ordre)" className="p-2 border rounded" title="Ordre d'affichage des colonnes (1, 2, 3...)" />
+          <input name="color" type="color" value={newEmployee.color} onChange={handleInputChange} className="h-10 w-full border rounded cursor-pointer" />
+          <input name="workingHoursPercentage" type="number" value={newEmployee.workingHoursPercentage} onChange={handleInputChange} placeholder="% Heures contrat" className="p-2 border rounded" />
+          <input name="order" type="number" value={newEmployee.order} onChange={handleInputChange} placeholder="Ordre (Position)" className="p-2 border rounded" />
           
           <div className="flex space-x-2">
             <button onClick={editingEmployeeId ? handleUpdateEmployee : handleAddEmployee} className="bg-blue-600 text-white px-4 py-2 rounded flex-1">

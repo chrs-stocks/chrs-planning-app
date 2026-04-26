@@ -5,7 +5,7 @@ import { addMonths, subMonths, getISOWeek } from 'date-fns';
 import type { Shift } from '../data/shifts';
 import { getContrastingTextColor } from '../utils/colorUtils';
 import { ShiftSelectionModal } from './ShiftSelectionModal';
-import { getShiftById, SHIFT_OPTIONS } from '../data/shifts';
+import { SHIFT_OPTIONS } from '../data/shifts';
 import Notes from './Notes';
 import { loadEmployees } from '../data/employeeData';
 import { useScheduleData } from '../hooks/useScheduleData';
@@ -52,6 +52,12 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
     setIsModalOpen(true);
   };
 
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedEmployeeId(null);
+    setSelectedDate(null);
+  };
+
   const handleSelectShift = async (shift: Shift, isOverlay: boolean) => {
     if (selectedEmployeeId && selectedDate) {
       let updatedDayData: any = null;
@@ -61,8 +67,8 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
         const empDayData = new Map(newSchedule.get(selectedEmployeeId)!);
         const cur = empDayData.get(selectedDate) || { primaryShift: null, overlays: [] };
         if (isOverlay) {
-          const idx = cur.overlays.findIndex(o => o.id === shift.id);
-          const overlays = idx > -1 ? cur.overlays.filter(o => o.id !== shift.id) : [...cur.overlays, shift];
+          const idx = cur.overlays.findIndex((o: Shift) => o.id === shift.id);
+          const overlays = idx > -1 ? cur.overlays.filter((o: Shift) => o.id !== shift.id) : [...cur.overlays, shift];
           updatedDayData = { ...cur, overlays };
         } else {
           updatedDayData = { ...cur, primaryShift: shift };
@@ -146,9 +152,10 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
             <tr>
               <th className="py-2 px-4 border text-left w-40"></th>
               {days.map(day => {
+                const formattedDay = format(day, 'yyyy-MM-dd');
                 const isHoliday = isFrenchPublicHoliday(day);
-                const isSchoolHol = schoolHolidays.has(format(day, 'yyyy-MM-dd'));
-                return <th key={format(day, 'yyyy-MM-dd')} className="py-2 px-1 border text-center text-xs" style={{ backgroundColor: isHoliday ? '#FFDDE0' : isSchoolHol ? '#FFFACD' : 'transparent' }}>{format(day, 'd')}</th>;
+                const isSchoolHol = schoolHolidays.has(formattedDay);
+                return <th key={formattedDay} className="py-2 px-1 border text-center text-xs" style={{ backgroundColor: isHoliday ? '#FFDDE0' : isSchoolHol ? '#FFFACD' : 'transparent' }}>{format(day, 'd')}</th>;
               })}
             </tr>
           </thead>
@@ -175,7 +182,7 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
         </table>
       </div>
       {isModalOpen && selectedEmployeeId && selectedDate && (
-        <ShiftSelectionModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSelectShift={handleSelectShift} onClearShift={handleClearShift} onSelectCustomShift={handleSelectCustomShift} employeeId={selectedEmployeeId} date={selectedDate} x={modalX} y={modalY} customShiftOptions={SHIFT_OPTIONS.filter(s => s.type.startsWith('cuisinier') || s.isOverlay)} currentPrimaryShift={schedule.get(selectedEmployeeId)?.get(selectedDate)?.primaryShift} currentOverlays={schedule.get(selectedEmployeeId)?.get(selectedDate)?.overlays} />
+        <ShiftSelectionModal isOpen={isModalOpen} onClose={handleCloseModal} onSelectShift={handleSelectShift} onClearShift={handleClearShift} onSelectCustomShift={handleSelectCustomShift} employeeId={selectedEmployeeId} date={selectedDate} x={modalX} y={modalY} customShiftOptions={SHIFT_OPTIONS.filter(s => s.type.startsWith('cuisinier') || s.isOverlay)} currentPrimaryShift={schedule.get(selectedEmployeeId)?.get(selectedDate)?.primaryShift} currentOverlays={schedule.get(selectedEmployeeId)?.get(selectedDate)?.overlays} />
       )}
       <Notes currentDate={currentDate} context="cuisiniers" />
     </div>

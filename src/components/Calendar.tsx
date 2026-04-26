@@ -6,7 +6,6 @@ import { loadEmployees } from '../data/employeeData';
 import type { Employee } from '../data/employeeTypes';
 import { addMonths, subMonths, getISOWeek, startOfMonth, endOfMonth } from 'date-fns';
 import type { Shift } from '../data/shifts';
-import { SHIFT_OPTIONS } from '../data/shifts';
 import { ShiftSelectionModal } from './ShiftSelectionModal';
 import Notes from './Notes';
 import { useScheduleData } from '../hooks/useScheduleData';
@@ -141,21 +140,19 @@ const Calendar: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHolidays })
         </div>
       </div>
 
-      {showValidation && validationErrors.length > 0 && (
+      {showValidation && (
         <div className="mb-4 p-4 bg-red-50 border-l-4 border-red-500 no-print">
           <div className="flex justify-between items-start">
-            <h3 className="text-red-800 font-bold mb-2">Erreurs détectées :</h3>
+            <h3 className="text-red-800 font-bold mb-2">Résultat de la vérification :</h3>
             <button onClick={() => setShowValidation(false)} className="text-red-500 text-xs underline">Fermer</button>
           </div>
-          <ul className="text-sm text-red-700 list-disc list-inside">
-            {validationErrors.map((err, i) => <li key={i}>{err.message}</li>)}
-          </ul>
-        </div>
-      )}
-
-      {showValidation && validationErrors.length === 0 && (
-        <div className="mb-4 p-4 bg-green-50 border-l-4 border-green-500 no-print">
-          <p className="text-green-800 font-bold">✅ Aucune erreur détectée.</p>
+          {validationErrors.length > 0 ? (
+            <ul className="text-sm text-red-700 list-disc list-inside">
+              {validationErrors.map((err, i) => <li key={i}>{err.message}</li>)}
+            </ul>
+          ) : (
+            <p className="text-green-800 font-bold">✅ Aucune erreur détectée.</p>
+          )}
         </div>
       )}
 
@@ -202,7 +199,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHolidays })
                     const data = schedule.get(employee.id)?.get(formattedDay);
                     const primaryShift = data?.primaryShift;
                     const overlays = data?.overlays || [];
-                    let displayTime = primaryShift ? primaryShift.time : '';
+                    let displayTime = primaryShift ? (primaryShift.id === 'training-week' && day.getDay() === 3 ? 'FORMATION' : primaryShift.time) : '';
                     const overlayCodes = overlays.map(o => o.shortCode).filter(Boolean).join(' ');
                     if (overlayCodes) displayTime = `${displayTime}<br />${overlayCodes}`.trim();
                     const displayColor = primaryShift ? employee.color : 'transparent';
