@@ -14,7 +14,7 @@ import { useAuth } from '../hooks/useAuth';
 import { validateSchedules } from '../utils/validationUtils';
 import type { ValidationNote } from '../utils/validationUtils';
 
-const Calendar: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHolidays }) => {
+const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: string }> = ({ schoolHolidays, filterEmployeeName }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [schedule, setSchedule] = useState<Map<string, Map<string, { primaryShift: Shift | null, overlays: Shift[] }>>>(new Map());
   const { generalSchedule, cuisinierSchedule, veilleurSchedule } = useScheduleData();
@@ -33,8 +33,13 @@ const Calendar: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHolidays })
   useEffect(() => {
     const employees = loadEmployees();
     setAllEmployees(employees);
-    setVisibleEmployeeIds(new Set(employees.map(e => e.id)));
-  }, []);
+    if (filterEmployeeName) {
+      const matched = employees.filter(e => e.name === filterEmployeeName);
+      setVisibleEmployeeIds(new Set(matched.map(e => e.id)));
+    } else {
+      setVisibleEmployeeIds(new Set(employees.map(e => e.id)));
+    }
+  }, [filterEmployeeName]);
 
   useEffect(() => {
     if (generalSchedule && generalSchedule.size > 0) setSchedule(generalSchedule);
@@ -134,9 +139,13 @@ const Calendar: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHolidays })
       <div className="flex justify-between items-center mb-4 no-print">
         <div className="flex space-x-2">
           <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Mois précédent</button>
-          <button onClick={handleVerify} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-bold animate-pulse">VÉRIFIER LE PLANNING</button>
+          {isAdmin && !filterEmployeeName && (
+            <button onClick={handleVerify} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-bold animate-pulse">VÉRIFIER LE PLANNING</button>
+          )}
         </div>
-        <h2 className="text-2xl font-bold">{format(currentDate, 'MMMM yyyy', { locale: fr })}</h2>
+        <h2 className="text-2xl font-bold">
+          {filterEmployeeName ? `Mon Planning — ` : ''}{format(currentDate, 'MMMM yyyy', { locale: fr })}
+        </h2>
         <div className="flex space-x-2">
           <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Mois suivant</button>
           <button onClick={() => window.print()} className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">Imprimer</button>
@@ -159,17 +168,19 @@ const Calendar: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHolidays })
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-4 mb-4 no-print bg-gray-50 p-3 rounded border border-gray-200">
-        <span className="font-semibold text-blue-800">Filtrer Colonnes :</span>
-        <div className="flex flex-wrap gap-2">
-          {allEmployees.map(emp => (
-            <label key={emp.id} className="flex items-center space-x-1 bg-white px-2 py-1 rounded border text-sm cursor-pointer hover:bg-blue-50">
-              <input type="checkbox" checked={visibleEmployeeIds.has(emp.id)} onChange={() => toggleEmployeeVisibility(emp.id)} className="rounded" />
-              <span>{emp.name}</span>
-            </label>
-          ))}
+      {isAdmin && !filterEmployeeName && (
+        <div className="flex flex-wrap items-center gap-4 mb-4 no-print bg-gray-50 p-3 rounded border border-gray-200">
+          <span className="font-semibold text-blue-800">Filtrer Colonnes :</span>
+          <div className="flex flex-wrap gap-2">
+            {allEmployees.map(emp => (
+              <label key={emp.id} className="flex items-center space-x-1 bg-white px-2 py-1 rounded border text-sm cursor-pointer hover:bg-blue-50">
+                <input type="checkbox" checked={visibleEmployeeIds.has(emp.id)} onChange={() => toggleEmployeeVisibility(emp.id)} className="rounded" />
+                <span>{emp.name}</span>
+              </label>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="overflow-x-auto">
         <table className="min-w-full table-fixed bg-white border-collapse border border-gray-200">

@@ -192,16 +192,11 @@ export const supabaseService = {
     }
   },
 
-  // Auth management
-  async sendPasswordResetEmail(email: string) {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin,
+  async sendMagicLink(email: string) {
+    const { error } = await supabase.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: false },
     });
-    if (error) throw error;
-  },
-
-  async updatePassword(password: string) {
-    const { error } = await supabase.auth.updateUser({ password });
     if (error) throw error;
   }
 };

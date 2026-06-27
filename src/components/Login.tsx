@@ -1,109 +1,127 @@
 import React, { useState } from 'react';
 import { supabase } from '../supabaseClient';
-import { supabaseService } from '../supabaseService';
 import { useAuth } from '../hooks/useAuth';
 
 const Login: React.FC = () => {
-  const { user } = useAuth();
+  const { user, profileName, isAdmin } = useAuth();
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [view, setView] = useState<'login' | 'forgot' | 'change'>('login');
-  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleSendLink = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    setMessage(null);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) setMessage({ type: 'error', text: 'Erreur : ' + error.message });
-    else setMessage({ type: 'success', text: 'Connexion réussie !' });
-    setLoading(false);
-  };
+    setError(null);
 
-  const handleResetRequest = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await supabaseService.sendPasswordResetEmail(email);
-      setMessage({ type: 'success', text: 'Email de réinitialisation envoyé !' });
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Une erreur est survenue';
-      setMessage({ type: 'error', text: msg });
-    }
-    setLoading(false);
-  };
+    const { error } = await supabase.auth.signInWithOtp({
+      email: email.trim(),
+      options: {
+        shouldCreateUser: false, // seuls les comptes existants peuvent se connecter
+      },
+    });
 
-  const handleChangePassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await supabaseService.updatePassword(newPassword);
-      setMessage({ type: 'success', text: 'Mot de passe mis à jour avec succès !' });
-      setNewPassword('');
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : 'Une erreur est survenue';
-      setMessage({ type: 'error', text: msg });
+    if (error) {
+      if (error.message.includes('Signups not allowed')) {
+        setError("Cette adresse email n'est pas enregistrée dans l'application. Contactez votre administrateur.");
+      } else {
+        setError("Erreur lors de l'envoi : " + error.message);
+      }
+    } else {
+      setSent(true);
     }
     setLoading(false);
   };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    setMessage({ type: 'success', text: 'Déconnecté' });
-    setView('login');
   };
 
-  if (user && view !== 'change') {
+  if (user) {
     return (
-      <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md border border-gray-200">
-        <h2 className="text-xl font-bold mb-4 text-center">Vous êtes connecté ({user.email})</h2>
-        <div className="space-y-3">
-          <button onClick={() => setView('change')} className="w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600">
-            Changer mon mot de passe
-          </button>
-          <button onClick={handleLogout} className="w-full bg-gray-200 text-gray-700 py-2 rounded hover:bg-gray-300 font-bold">
-            Se déconnecter
-          </button>
+      <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md border border-gray-200 text-center">
+        <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+          <span className="text-2xl font-bold text-blue-700">
+            {(profileName || user.email || '?')[0].toUpperCase()}
+          </span>
         </div>
+        <h2 className="text-xl font-bold mb-1">{profileName || 'Compte'}</h2>
+        <p className="text-gray-500 text-sm mb-1">{user.email}</p>
+        <p className="text-xs mb-6">
+          <span className={`px-2 py-0.5 rounded-full font-semibold ${isAdmin ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
+            {isAdmin ? 'Direction / Admin' : 'Employé'}
+          </span>
+        </p>
+        <button
+          onClick={handleLogout}
+          className="w-full bg-gray-200 text-gray-700 py-2 rounded hover:bg-gray-300 font-semibold"
+        >
+          Se déconnecter
+        </button>
+      </div>
+    );
+  }
+
+  if (sent) {
+    return (
+      <div className="max-w-md mx-auto mt-10 p-8 bg-white rounded-lg shadow-md border border-green-200 text-center">
+        <div className="text-5xl mb-4">📬</div>
+        <h2 className="text-xl font-bold text-green-700 mb-3">Lien envoyé !</h2>
+        <p className="text-gray-600 mb-2">
+          Un lien de connexion a été envoyé à <strong>{email}</strong>.
+        </p>
+        <p className="text-gray-500 text-sm mb-6">
+          Ouvrez votre boite mail et cliquez sur le lien pour accéder à l'application. Il est valable 1 heure.
+        </p>
+        <button
+          onClick={() => { setSent(false); setEmail(''); }}
+          className="text-sm text-blue-600 underline"
+        >
+          Utiliser une autre adresse
+        </button>
       </div>
     );
   }
 
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md border border-gray-200">
-      <h2 className="text-2xl font-bold mb-6 text-center text-blue-700">
-        {view === 'login' ? 'Connexion' : view === 'forgot' ? 'Réinitialisation' : 'Nouveau mot de passe'}
-      </h2>
-      
-      {view === 'login' && (
-        <form onSubmit={handleLogin} className="space-y-4">
-          <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-2 border rounded" required />
-          <input type="password" placeholder="Mot de passe" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full p-2 border rounded" required />
-          <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">{loading ? 'Chargement...' : 'Se connecter'}</button>
-          <button type="button" onClick={() => setView('forgot')} className="w-full text-sm text-blue-600 underline">Mot de passe oublié ?</button>
-        </form>
-      )}
+    <div className="max-w-md mx-auto mt-10 p-8 bg-white rounded-lg shadow-md border border-gray-200">
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold text-blue-700">Connexion</h2>
+        <p className="text-gray-500 text-sm mt-1">Entrez votre email professionnel pour recevoir un lien de connexion</p>
+      </div>
 
-      {view === 'forgot' && (
-        <form onSubmit={handleResetRequest} className="space-y-4">
-          <p className="text-sm text-gray-600">Entrez votre email pour recevoir un lien de réinitialisation.</p>
-          <input type="email" placeholder="Votre email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full p-2 border rounded" required />
-          <button type="submit" disabled={loading} className="w-full bg-blue-600 text-white py-2 rounded">{loading ? 'Envoi...' : 'Envoyer le lien'}</button>
-          <button type="button" onClick={() => setView('login')} className="w-full text-sm text-gray-500 underline">Retour</button>
-        </form>
-      )}
+      <form onSubmit={handleSendLink} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Adresse email</label>
+          <input
+            type="email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            placeholder="prenom@maison-saint-martin.fr"
+            className="w-full p-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400"
+            required
+            autoFocus
+          />
+        </div>
 
-      {view === 'change' && (
-        <form onSubmit={handleChangePassword} className="space-y-4">
-          <input type="password" placeholder="Nouveau mot de passe" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full p-2 border rounded" required minLength={6} />
-          <button type="submit" disabled={loading} className="w-full bg-green-600 text-white py-2 rounded">Mettre à jour</button>
-          <button type="button" onClick={() => setView('login')} className="w-full text-sm text-gray-500 underline">Annuler</button>
-        </form>
-      )}
-      
-      {message && <div className={`mt-4 p-3 rounded text-sm ${message.type === 'success' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>{message.text}</div>}
+        {error && (
+          <div className="p-3 bg-red-50 border border-red-200 rounded text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading}
+          className={`w-full py-3 rounded-lg font-bold text-white transition-all ${loading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'}`}
+        >
+          {loading ? 'Envoi en cours...' : 'Recevoir mon lien de connexion'}
+        </button>
+      </form>
+
+      <p className="mt-6 text-center text-xs text-gray-400">
+        Pas de mot de passe à retenir — un lien sécurisé vous est envoyé par email à chaque connexion.
+      </p>
     </div>
   );
 };
