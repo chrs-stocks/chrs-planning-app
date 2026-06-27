@@ -39,13 +39,6 @@ const UserManagement: React.FC = () => {
     fetchProfiles();
   }, []);
 
-  const resetForm = () => {
-    setName('');
-    setEmail('');
-    setRole('employee');
-    setShowForm(false);
-    setMessage(null);
-  };
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
