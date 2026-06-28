@@ -44,6 +44,11 @@ export const SHIFT_OPTIONS: Shift[] = [
   { id: 'overlay-time-off-in-lieu', name: 'Récupération', time: '0h', type: 'overlay', color: '#CCFFCC', textColor: '#333333', shortCode: 'REC', isOverlay: true },
   { id: 'overlay-off', name: 'Repos', time: '0h', type: 'overlay', color: '#E0E0E0', textColor: '#333333', shortCode: 'R', isOverlay: true },
   { id: 'overlay-trimestriel-leave', name: 'Congé Trimestriel', time: '0h', type: 'overlay', color: '#FFDAB9', textColor: '#333333', shortCode: 'CT', isOverlay: true },
+  { id: 'overlay-parental-leave', name: 'Congé Parental', time: '0h', type: 'overlay', color: '#E8D5F5', textColor: '#333333', shortCode: 'CPAR', isOverlay: true },
+  { id: 'overlay-family-leave', name: 'Congé Familial', time: '0h', type: 'overlay', color: '#FFE0B2', textColor: '#333333', shortCode: 'CF', isOverlay: true },
+  { id: 'overlay-unpaid-leave', name: 'Congé Sans Solde', time: '0h', type: 'overlay', color: '#ECEFF1', textColor: '#333333', shortCode: 'CSS', isOverlay: true },
+  { id: 'overlay-family-reason', name: 'Raison Familiale', time: '0h', type: 'overlay', color: '#E8F5E9', textColor: '#333333', shortCode: 'RF', isOverlay: true },
+  { id: 'overlay-sick-child', name: 'Congé Enfant Malade', time: '0h', type: 'overlay', color: '#E1F5FE', textColor: '#333333', shortCode: 'CEM', isOverlay: true },
  // PeachPuff
   { id: 'overlay-extra-night', name: 'Nuit Supplémentaire', time: '12h', type: 'overlay', color: '#8A2BE2', textColor: '#FFFFFF', shortCode: 'NS', isOverlay: true }, // BlueViolet
   // Workplace Overlays

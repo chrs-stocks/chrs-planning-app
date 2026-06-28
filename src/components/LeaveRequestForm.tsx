@@ -3,7 +3,7 @@ import SignatureCanvas from 'react-signature-canvas';
 import { supabaseService } from '../supabaseService';
 import { useAuth } from '../hooks/useAuth';
 
-type RequestType = 'ct' | 'recup' | 'overtime' | 'modif_horaire' | 'autre';
+type RequestType = 'ct' | 'recup' | 'overtime' | 'modif_horaire' | 'conge_parental' | 'conge_familial' | 'conge_sans_solde' | 'raison_familiale' | 'enfant_malade' | 'autre';
 
 const LeaveRequestForm: React.FC = () => {
   const { user, loading: authLoading } = useAuth();
@@ -72,6 +72,11 @@ const LeaveRequestForm: React.FC = () => {
       case 'recup': return "Demande de récupération d'heures. Veuillez préciser le nombre d'heures ou la période à récupérer.";
       case 'overtime': return "Déclaration d'heures supplémentaires. Veuillez préciser le motif et le nombre d'heures effectuées.";
       case 'modif_horaire': return "Signalement d'une modification horaire. Ce document atteste du changement d'horaire convenu.";
+      case 'conge_parental': return "Demande de congé parental. Ce document atteste de votre demande d'absence liée à la parentalité.";
+      case 'conge_familial': return "Demande de congé familial. Ce document atteste de votre demande d'absence pour motif familial.";
+      case 'conge_sans_solde': return "Demande de congé sans solde. Ce document formalise votre demande d'absence non rémunérée.";
+      case 'raison_familiale': return "Absence pour raison familiale. Ce document atteste de votre absence pour un événement familial.";
+      case 'enfant_malade': return "Congé pour enfant malade. Ce document atteste de votre absence pour s'occuper d'un enfant malade.";
       case 'autre': return "Autre type de demande ou signalement.";
       default: return "";
     }
@@ -96,6 +101,11 @@ const LeaveRequestForm: React.FC = () => {
             <option value="recup">Récupération</option>
             <option value="overtime">Heures Supplémentaires</option>
             <option value="modif_horaire">Modification Horaire</option>
+            <option value="conge_parental">Congé Parental</option>
+            <option value="conge_familial">Congé Familial</option>
+            <option value="conge_sans_solde">Congé Sans Solde</option>
+            <option value="raison_familiale">Raison Familiale</option>
+            <option value="enfant_malade">Congé Enfant Malade</option>
             <option value="autre">Autre</option>
           </select>
         </div>
