@@ -13,6 +13,7 @@ import Login from './components/Login';
 import { getFrenchSchoolHolidays } from './utils/dateUtils';
 import { loadEmployees } from './data/employeeData';
 import { useAuth } from './hooks/useAuth';
+import { supabaseService } from './supabaseService';
 
 type AdminView = 'general' | 'veilleurs' | 'cuisiniers' | 'astreintes' | 'employees' | 'statistics' | 'requests' | 'admin-requests' | 'user-management' | 'notify' | 'login';
 type EmployeeView = 'general' | 'my-planning' | 'requests' | 'login';
@@ -22,6 +23,40 @@ function App() {
   const [currentView, setCurrentView] = useState<View>('general');
   const [schoolHolidays, setSchoolHolidays] = useState<Set<string>>(new Set());
   const { user, isAdmin, loading, profileName } = useAuth();
+  const [exporting, setExporting] = useState(false);
+
+  const handleExportData = async () => {
+    setExporting(true);
+    try {
+      const [employees, general, veilleur, cuisinier, astreinte] = await Promise.all([
+        supabaseService.getEmployees(),
+        supabaseService.getSchedules('general'),
+        supabaseService.getSchedules('veilleur'),
+        supabaseService.getSchedules('cuisinier'),
+        supabaseService.getSchedules('astreinte'),
+      ]);
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        version: '1.0',
+        employees,
+        schedules: { general, veilleur, cuisinier, astreinte },
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `planning-msm-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export failed:', err);
+      alert('Erreur lors de l\'export. Vérifiez votre connexion Supabase.');
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     const employeesInStorage = localStorage.getItem('allEmployees');
@@ -160,6 +195,14 @@ function App() {
                 className={`px-3 py-2 rounded ${currentView === 'notify' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
               >
                 Notifier l'équipe
+              </button>
+              <button
+                onClick={handleExportData}
+                disabled={exporting}
+                title="Télécharger une sauvegarde complète de toutes les données"
+                className="px-3 py-2 rounded bg-green-700 hover:bg-green-800 text-white text-sm font-semibold disabled:opacity-50"
+              >
+                {exporting ? '⏳ Export...' : '💾 Sauvegarder'}
               </button>
             </>
           )}
