@@ -36,17 +36,20 @@ export const syncEmployeesWithSupabase = async () => {
   try {
     const supabaseEmployees = await supabaseService.getEmployees();
     if (supabaseEmployees.length > 0) {
+      // Supabase a des données → source de vérité
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(supabaseEmployees));
       return supabaseEmployees;
-    } else {
-      // If Supabase is empty, push our local ones
-      const localEmployees = loadEmployees();
-      await supabaseService.saveEmployees(localEmployees);
-      return localEmployees;
     }
+    // Supabase vide : on initialise depuis localStorage ou les données codées en dur
+    const seed = loadEmployees().length > 0 ? loadEmployees() : initialEmployees;
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(seed));
+    await supabaseService.saveEmployees(seed);
+    return seed;
   } catch (error) {
     console.error("Failed to sync employees with Supabase", error);
-    return loadEmployees();
+    // Fallback complet : localStorage, sinon liste initiale codée en dur
+    const local = loadEmployees();
+    return local.length > 0 ? local : initialEmployees;
   }
 };
 
