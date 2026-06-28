@@ -1,10 +1,11 @@
 import type { Employee } from '../data/employeeTypes';
 import type { Shift } from '../data/shifts';
-import { eachDayOfInterval, format } from 'date-fns';
+import { ABSENCE_OVERLAY_IDS } from '../data/shifts';
+import { eachDayOfInterval, format, addDays, subDays } from 'date-fns';
 
-// Define types for the schedule data
-type GeneralSchedule = Map<string, Map<string, { primaryShift: Shift | null, overlays: Shift[] }>>;
-type CuisinierVeilleurSchedule = Map<string, Map<string, { primaryShift: Shift | null, overlays: Shift[] }>>;
+type DayData = { primaryShift: Shift | null; overlays: Shift[] };
+type GeneralSchedule = Map<string, Map<string, DayData>>;
+type CuisinierVeilleurSchedule = Map<string, Map<string, DayData>>;
 
 export interface ValidationNote {
   date: string;
@@ -12,19 +13,51 @@ export interface ValidationNote {
   severity: 'error' | 'warning';
 }
 
-const isAbsentShift = (shift: Shift | null, overlays: Shift[] = []): boolean => {
-  if (!shift) return true;
-  const absentShiftIds = [
-    'overlay-paid-leave', // CP
-    'overlay-trimestriel-leave', // CT
-    'overlay-time-off-in-lieu', // Récup
-    'overlay-off', // Repos
-    'overlay-sick-leave', // AM
-    'recovery', 'off', 'veilleur-off'
-  ];
-  // Si le shift principal est un repos/congé OU si un overlay de type congé est présent
-  const hasAbsenceOverlay = overlays.some(o => absentShiftIds.includes(o.id));
-  return absentShiftIds.includes(shift.id) || hasAbsenceOverlay;
+// IDs de shifts primaires d'absence
+const ABSENCE_PRIMARY_IDS = new Set(['off', 'recovery', 'veilleur-off']);
+
+const getData = (
+  schedule: GeneralSchedule,
+  empId: string,
+  dateStr: string
+): DayData | undefined => schedule.get(empId)?.get(dateStr);
+
+// Salarié absent ce jour (shift repos/récup OU overlay d'absence)
+const isAbsent = (data: DayData | undefined): boolean => {
+  if (!data || !data.primaryShift) {
+    return data?.overlays?.some(o => ABSENCE_OVERLAY_IDS.has(o.id)) ?? false;
+  }
+  return (
+    ABSENCE_PRIMARY_IDS.has(data.primaryShift.id) ||
+    data.overlays.some(o => ABSENCE_OVERLAY_IDS.has(o.id))
+  );
+};
+
+// Shift couvre la plage matinale (≤ 07h → ≥ 13h)
+const coversMorning = (id: string) => ['morning', 'day'].includes(id);
+
+// Shift couvre la plage après-midi (≤ 13h → ≥ 19h)
+const coversAfternoon = (id: string) => ['afternoon', 'day'].includes(id);
+
+// Shift couvre 16h-20h (présence soir)
+const coversEvening = (id: string) => id === 'afternoon'; // 13:00-20:00
+
+// Salarié en repos (vendredi avant weekend)
+const isOffDay = (data: DayData | undefined): boolean => {
+  if (!data || !data.primaryShift) return false;
+  return (
+    data.primaryShift.id === 'off' ||
+    data.overlays.some(o => o.id === 'overlay-off')
+  );
+};
+
+// Salarié en récupération
+const isRecupDay = (data: DayData | undefined): boolean => {
+  if (!data || !data.primaryShift) return false;
+  return (
+    data.primaryShift.id === 'recovery' ||
+    data.overlays.some(o => o.id === 'overlay-time-off-in-lieu')
+  );
 };
 
 export const validateSchedules = (
@@ -39,73 +72,196 @@ export const validateSchedules = (
   const notes: ValidationNote[] = [];
   const daysInPeriod = eachDayOfInterval({ start: startDate, end: endDate });
 
+  // Salariés du planning général (sans stagiaires pour les checks de couverture)
+  const generalAll = employees.filter(
+    e => e.type === 'general' || e.type === 'reinforcement' || e.type === 'interim'
+  );
+  // Tous pour les checks individuels (y compris intern pour détecter les absences)
+  const generalAndIntern = employees.filter(
+    e => ['general', 'reinforcement', 'interim', 'intern'].includes(e.type)
+  );
+
+  // Pré-calcul : qui travaille chaque samedi (shift 'day' non absent)
+  const saturdayWorkers = new Map<string, string[]>(); // 'yyyy-MM-dd' → [empId]
   daysInPeriod.forEach(day => {
-    const formattedDay = format(day, 'yyyy-MM-dd');
-    const displayDate = format(day, 'dd/MM/yyyy', { locale: undefined });
+    if (day.getDay() !== 6) return;
+    const ds = format(day, 'yyyy-MM-dd');
+    const workers = generalAll
+      .filter(emp => {
+        const d = getData(generalSchedule, emp.id, ds);
+        return d?.primaryShift?.id === 'day' && !isAbsent(d);
+      })
+      .map(e => e.id);
+    saturdayWorkers.set(ds, workers);
+  });
 
-    // 1. VÉRIFICATION JOURNÉE (07:00 - 19:00)
-    // Se base sur le planning général
-    if (context === 'general' || context === 'all') {
-      let hasMorning = false; // Matin (ex: 6h45-13h45)
-      let hasAfternoon = false; // Après-midi (ex: 13h-20h)
-      let hasFullDay = false; // Journée 12h (7h-19h)
+  // ── Validation planning général ─────────────────────────────────────────────
+  if (context === 'general' || context === 'all') {
+    daysInPeriod.forEach(day => {
+      const dow = day.getDay(); // 0=dim, 1=lun, …, 6=sam
+      const ds = format(day, 'yyyy-MM-dd');
+      const disp = format(day, 'dd/MM/yyyy');
 
-      employees.filter(e => e.type === 'general' || e.type === 'reinforcement' || e.type === 'interim').forEach(emp => {
-        const data = generalSchedule.get(emp.id)?.get(formattedDay);
-        if (data?.primaryShift && !isAbsentShift(data.primaryShift, data.overlays)) {
-          if (data.primaryShift.id === 'morning') hasMorning = true;
-          if (data.primaryShift.id === 'afternoon') hasAfternoon = true;
-          if (data.primaryShift.id === 'day' || data.primaryShift.id === 'dorine-day') hasFullDay = true;
+      // ── RÈGLE 1 : couverture 07h-19h (hors jeudi) ──────────────────────────
+      if (dow !== 4) {
+        let hasMorning = false;
+        let hasAfternoon = false;
+
+        generalAll.forEach(emp => {
+          const d = getData(generalSchedule, emp.id, ds);
+          if (d?.primaryShift && !isAbsent(d)) {
+            if (coversMorning(d.primaryShift.id)) hasMorning = true;
+            if (coversAfternoon(d.primaryShift.id)) hasAfternoon = true;
+          }
+        });
+
+        if (!hasMorning && !hasAfternoon) {
+          // Aucun shift du tout → probablement non planifié, warning seulement
+          notes.push({
+            date: ds,
+            message: `${disp} : planning non renseigné (aucune couverture 07h-19h).`,
+            severity: 'warning',
+          });
+        } else if (!hasMorning) {
+          notes.push({
+            date: ds,
+            message: `${disp} : personne en horaire matin (07h-13h45) — créneau 07h-13h non couvert.`,
+            severity: 'error',
+          });
+        } else if (!hasAfternoon) {
+          notes.push({
+            date: ds,
+            message: `${disp} : personne en horaire après-midi (13h-20h) — créneau 13h-19h non couvert.`,
+            severity: 'error',
+          });
         }
-      });
+      }
 
-      if (!hasFullDay && !(hasMorning && hasAfternoon)) {
-        notes.push({
-          date: formattedDay,
-          message: `Manque de personnel pour couvrir la JOURNÉE (7h-19h) le ${displayDate}.`,
-          severity: 'error',
+      // ── RÈGLE 2 : jeudi — présence 16h-20h obligatoire ─────────────────────
+      if (dow === 4) {
+        let hasEvening = false;
+        generalAll.forEach(emp => {
+          const d = getData(generalSchedule, emp.id, ds);
+          if (d?.primaryShift && !isAbsent(d) && coversEvening(d.primaryShift.id)) {
+            hasEvening = true;
+          }
+        });
+        if (!hasEvening) {
+          notes.push({
+            date: ds,
+            message: `${disp} (Jeudi) : personne en horaire après-midi pour couvrir 16h-20h.`,
+            severity: 'error',
+          });
+        }
+
+        // Vérifier que des salariés sont bien présents le jeudi matin
+        const presentThursday = generalAll.filter(emp => {
+          const d = getData(generalSchedule, emp.id, ds);
+          return d?.primaryShift && !isAbsent(d);
+        });
+        if (presentThursday.length === 0) {
+          notes.push({
+            date: ds,
+            message: `${disp} (Jeudi) : aucun salarié renseigné pour la matinée collective.`,
+            severity: 'warning',
+          });
+        }
+      }
+
+      // ── RÈGLE 3 : vendredi → repos pour qui travaille le samedi ────────────
+      if (dow === 5) {
+        const nextSat = format(addDays(day, 1), 'yyyy-MM-dd');
+        const workers = saturdayWorkers.get(nextSat) ?? [];
+        workers.forEach(empId => {
+          const d = getData(generalSchedule, empId, ds);
+          if (!isOffDay(d)) {
+            const emp = employees.find(e => e.id === empId);
+            notes.push({
+              date: ds,
+              message: `${disp} : ${emp?.name ?? empId} travaille samedi mais n'est pas en repos le vendredi précédent.`,
+              severity: 'warning',
+            });
+          }
         });
       }
-    }
 
-    // 2. VÉRIFICATION NUIT (19:00 - 07:00)
-    // Se base sur le planning des veilleurs
-    if (context === 'veilleurs' || context === 'all') {
+      // ── RÈGLE 4 : lundi/mardi → récup pour qui a travaillé le week-end ─────
+      if (dow === 1 || dow === 2) {
+        // Samedi de ce week-end : sam avant ce lundi/mardi
+        const prevSat = format(subDays(day, dow === 1 ? 2 : 3), 'yyyy-MM-dd');
+        const workers = saturdayWorkers.get(prevSat) ?? [];
+        const dayLabel = dow === 1 ? 'lundi' : 'mardi';
+        workers.forEach(empId => {
+          const d = getData(generalSchedule, empId, ds);
+          if (!isRecupDay(d)) {
+            const emp = employees.find(e => e.id === empId);
+            notes.push({
+              date: ds,
+              message: `${disp} : ${emp?.name ?? empId} a travaillé le week-end mais n'est pas en récup le ${dayLabel}.`,
+              severity: 'warning',
+            });
+          }
+        });
+      }
+
+      // ── RÈGLE 5 : absences non renseignées ──────────────────────────────────
+      // Si un salarié n'a ni shift ni overlay le jour ouvrable, simple warning
+      if (dow >= 1 && dow <= 5) {
+        generalAndIntern.forEach(emp => {
+          const d = getData(generalSchedule, emp.id, ds);
+          if (!d || (!d.primaryShift && d.overlays.length === 0)) {
+            notes.push({
+              date: ds,
+              message: `${disp} : ${emp.name} n'a aucun shift renseigné.`,
+              severity: 'warning',
+            });
+          }
+        });
+      }
+    });
+  }
+
+  // ── Validation veilleurs ─────────────────────────────────────────────────────
+  if (context === 'veilleurs' || context === 'all') {
+    daysInPeriod.forEach(day => {
+      const ds = format(day, 'yyyy-MM-dd');
+      const disp = format(day, 'dd/MM/yyyy');
       let hasNightWatch = false;
       employees.filter(e => e.type === 'veilleur').forEach(emp => {
-        const data = veilleurSchedule.get(emp.id)?.get(formattedDay);
-        if (data?.primaryShift && data.primaryShift.id === 'veilleur-night' && !isAbsentShift(data.primaryShift, data.overlays)) {
-          hasNightWatch = true;
-        }
+        const d = veilleurSchedule.get(emp.id)?.get(ds);
+        if (d?.primaryShift?.id === 'veilleur-night' && !isAbsent(d)) hasNightWatch = true;
       });
-
       if (!hasNightWatch) {
         notes.push({
-          date: formattedDay,
-          message: `Manque de personnel pour couvrir la NUIT (19h-7h) le ${displayDate}.`,
+          date: ds,
+          message: `${disp} : pas de veilleur de nuit (19h-7h).`,
           severity: 'error',
         });
       }
-    }
-    
-    // 3. VÉRIFICATION CUISINE (Optionnel selon besoin)
-    if (context === 'cuisiniers' || context === 'all') {
+    });
+  }
+
+  // ── Validation cuisiniers ────────────────────────────────────────────────────
+  if (context === 'cuisiniers' || context === 'all') {
+    daysInPeriod.forEach(day => {
+      const ds = format(day, 'yyyy-MM-dd');
+      const disp = format(day, 'dd/MM/yyyy');
       let hasKitchenMidi = false;
       employees.filter(e => e.type === 'cuisinier').forEach(emp => {
-        const data = cuisinierSchedule.get(emp.id)?.get(formattedDay);
-        if (data?.primaryShift && !isAbsentShift(data.primaryShift, data.overlays)) {
-          if (['cuisinier-7h', 'cuisinier-midi'].includes(data.primaryShift.id)) hasKitchenMidi = true;
+        const d = cuisinierSchedule.get(emp.id)?.get(ds);
+        if (d?.primaryShift && !isAbsent(d) && ['cuisinier-7h', 'cuisinier-midi'].includes(d.primaryShift.id)) {
+          hasKitchenMidi = true;
         }
       });
       if (!hasKitchenMidi) {
         notes.push({
-          date: formattedDay,
-          message: `Pas de cuisinier détecté le midi le ${displayDate}.`,
+          date: ds,
+          message: `${disp} : pas de cuisinier détecté le midi.`,
           severity: 'warning',
         });
       }
-    }
-  });
+    });
+  }
 
   return notes;
 };

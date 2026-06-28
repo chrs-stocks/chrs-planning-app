@@ -221,7 +221,10 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
         <div className="flex flex-wrap items-center gap-4 mb-4 no-print bg-gray-50 p-3 rounded border border-gray-200">
           <span className="font-semibold text-msm-navy">Filtrer Colonnes :</span>
           <div className="flex flex-wrap gap-2">
-            {allEmployees.map(emp => (
+            {allEmployees
+              .filter(e => ['general', 'reinforcement', 'interim', 'intern'].includes(e.type))
+              .sort((a, b) => (a.order || 0) - (b.order || 0))
+              .map(emp => (
               <label key={emp.id} className="flex items-center space-x-1 bg-white px-2 py-1 rounded border text-sm cursor-pointer hover:bg-msm-navy-light">
                 <input type="checkbox" checked={visibleEmployeeIds.has(emp.id)} onChange={() => toggleEmployeeVisibility(emp.id)} className="rounded" />
                 <span>{emp.name}</span>
