@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getDaysInMonth, format, isFrenchPublicHoliday } from '../utils/dateUtils';
 import { fr } from 'date-fns/locale';
 import { addMonths, subMonths, getISOWeek } from 'date-fns';
@@ -25,6 +25,8 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
   const [modalY, setModalY] = useState(0);
   const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
   const [visibleEmployeeIds, setVisibleEmployeeIds] = useState<Set<string>>(new Set());
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     const employees = loadEmployees();
@@ -35,6 +37,29 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
   useEffect(() => {
     if (cuisinierSchedule) setSchedule(cuisinierSchedule);
   }, [cuisinierSchedule]);
+
+  useEffect(() => {
+    if (schedule.size === 0) return;
+    const obj: Record<string, Record<string, { primaryShift: Shift | null; overlays: Shift[] }>> = {};
+    schedule.forEach((dateMap, empId) => {
+      obj[empId] = {};
+      dateMap.forEach((dayData, date) => { obj[empId][date] = dayData; });
+    });
+    localStorage.setItem('cuisinierSchedule', JSON.stringify(obj));
+  }, [schedule]);
+
+  const trySave = async (fn: () => Promise<void>) => {
+    setSaveStatus('saving');
+    clearTimeout(saveTimerRef.current);
+    try {
+      await fn();
+      setSaveStatus('saved');
+      saveTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2500);
+    } catch (err) {
+      console.error('Échec sauvegarde cuisinier:', err);
+      setSaveStatus('error');
+    }
+  };
 
   const toggleEmployeeVisibility = (id: string) => {
     const newSet = new Set(visibleEmployeeIds);
@@ -83,7 +108,7 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
       });
       if (finalData) {
         const data = finalData as { primaryShift: Shift | null, overlays: Shift[] };
-        await supabaseService.saveSchedule(selectedEmployeeId, selectedDate, 'cuisinier', data.primaryShift, data.overlays);
+        await trySave(() => supabaseService.saveSchedule(selectedEmployeeId, selectedDate, 'cuisinier', data.primaryShift, data.overlays));
       }
     }
   };
@@ -96,7 +121,7 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
         if (empMap) { empMap.delete(selectedDate); if (empMap.size === 0) newSchedule.delete(selectedEmployeeId); }
         return newSchedule;
       });
-      await supabaseService.deleteSchedule(selectedEmployeeId, selectedDate, 'cuisinier');
+      await trySave(() => supabaseService.deleteSchedule(selectedEmployeeId, selectedDate, 'cuisinier'));
     }
   };
 
@@ -194,6 +219,17 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
         <ShiftSelectionModal isOpen={isModalOpen} onClose={handleCloseModal} onSelectShift={handleSelectShift} onClearShift={handleClearShift} onSelectCustomShift={handleSelectCustomShift} employeeId={selectedEmployeeId} date={selectedDate} x={modalX} y={modalY} customShiftOptions={SHIFT_OPTIONS.filter(s => s.type.startsWith('cuisinier') || s.isOverlay)} currentPrimaryShift={schedule.get(selectedEmployeeId)?.get(selectedDate)?.primaryShift} currentOverlays={schedule.get(selectedEmployeeId)?.get(selectedDate)?.overlays} />
       )}
       <Notes currentDate={currentDate} context="cuisiniers" />
+      {saveStatus !== 'idle' && (
+        <div className={`fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg text-sm font-semibold z-50 ${
+          saveStatus === 'saving' ? 'bg-gray-100 text-gray-700 border border-gray-300' :
+          saveStatus === 'saved'  ? 'bg-green-100 text-green-800 border border-green-300' :
+                                    'bg-red-100 text-red-800 border border-red-300'
+        }`}>
+          {saveStatus === 'saving' && '⏳ Sauvegarde…'}
+          {saveStatus === 'saved'  && '✅ Sauvegardé'}
+          {saveStatus === 'error'  && '⚠️ Supabase inaccessible — données conservées localement'}
+        </div>
+      )}
     </div>
   );
 };

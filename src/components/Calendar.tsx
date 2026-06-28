@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getDaysInMonth, isWeekend, isFrenchPublicHoliday, format } from '../utils/dateUtils';
 import { fr } from 'date-fns/locale';
 import { getContrastingTextColor } from '../utils/colorUtils';
@@ -32,6 +32,8 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
   const [showValidation, setShowValidation] = useState(false);
   const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
   const [alertCells, setAlertCells] = useState<Set<string>>(new Set());
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     const employees = loadEmployees();
@@ -47,6 +49,17 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
   useEffect(() => {
     if (generalSchedule && generalSchedule.size > 0) setSchedule(generalSchedule);
   }, [generalSchedule]);
+
+  // Sync schedule → localStorage après chaque modification (filet de sécurité si Supabase échoue)
+  useEffect(() => {
+    if (schedule.size === 0) return;
+    const obj: Record<string, Record<string, { primaryShift: Shift | null; overlays: Shift[] }>> = {};
+    schedule.forEach((dateMap, empId) => {
+      obj[empId] = {};
+      dateMap.forEach((dayData, date) => { obj[empId][date] = dayData; });
+    });
+    localStorage.setItem('employeeSchedule', JSON.stringify(obj));
+  }, [schedule]);
 
   const handleVerify = () => {
     const errors = validateSchedules(
@@ -79,6 +92,19 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
     setModalKey(prev => prev + 1);
   };
 
+  const trySave = async (fn: () => Promise<void>) => {
+    setSaveStatus('saving');
+    clearTimeout(saveTimerRef.current);
+    try {
+      await fn();
+      setSaveStatus('saved');
+      saveTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2500);
+    } catch (err) {
+      console.error('Échec sauvegarde Supabase:', err);
+      setSaveStatus('error');
+    }
+  };
+
   const saveMultipleShifts = async (empId: string, updates: { date: string; primaryShift: Shift }[]) => {
     // Capture les overlays existants AVANT la mise à jour du state
     const existingOverlays = new Map(
@@ -95,11 +121,11 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
       newSchedule.set(empId, empMap);
       return newSchedule;
     });
-    await Promise.all(
+    await trySave(() => Promise.all(
       updates.map(({ date: ds, primaryShift }) =>
         supabaseService.saveSchedule(empId, ds, 'general', primaryShift, existingOverlays.get(ds) ?? [])
       )
-    );
+    ).then(() => undefined));
   };
 
   const handleApplyToWeek = async (shift: Shift, thursdayShift: Shift | null) => {
@@ -141,11 +167,11 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
       newSchedule.set(selectedEmployeeId, empMap);
       return newSchedule;
     });
-    await Promise.all(
+    await trySave(() => Promise.all(
       saves.map(({ ds, primary, overlays }) =>
         supabaseService.saveSchedule(selectedEmployeeId, ds, 'general', primary, overlays)
       )
-    );
+    ).then(() => undefined));
   };
 
   const handleWeekendAutoFill = async (shift: Shift, date: Date) => {
@@ -225,7 +251,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
     });
     if (updatedDayData) {
       const data = updatedDayData as { primaryShift: Shift | null, overlays: Shift[] };
-      await supabaseService.saveSchedule(selectedEmployeeId, selectedDate, 'general', data.primaryShift, data.overlays);
+      await trySave(() => supabaseService.saveSchedule(selectedEmployeeId, selectedDate, 'general', data.primaryShift, data.overlays));
     }
   };
 
@@ -237,7 +263,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
         if (empMap) { empMap.delete(selectedDate); if (empMap.size === 0) newSchedule.delete(selectedEmployeeId); }
         return newSchedule;
       });
-      await supabaseService.deleteSchedule(selectedEmployeeId, selectedDate, 'general');
+      await trySave(() => supabaseService.deleteSchedule(selectedEmployeeId, selectedDate, 'general'));
     }
   };
 
@@ -458,6 +484,19 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
           />
       )}
       <Notes currentDate={currentDate} context="general" />
+
+      {/* Indicateur de sauvegarde */}
+      {saveStatus !== 'idle' && (
+        <div className={`fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg text-sm font-semibold z-50 transition-all no-print ${
+          saveStatus === 'saving' ? 'bg-gray-100 text-gray-700 border border-gray-300' :
+          saveStatus === 'saved'  ? 'bg-green-100 text-green-800 border border-green-300' :
+                                    'bg-red-100 text-red-800 border border-red-300'
+        }`}>
+          {saveStatus === 'saving' && '⏳ Sauvegarde…'}
+          {saveStatus === 'saved'  && '✅ Sauvegardé'}
+          {saveStatus === 'error'  && '⚠️ Supabase inaccessible — données conservées localement'}
+        </div>
+      )}
     </div>
   );
 };
