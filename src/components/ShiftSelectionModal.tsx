@@ -18,6 +18,7 @@ interface ShiftSelectionModalProps {
   onClearShift: () => void;
   onSelectCustomShift: (customTime: string, assignedPersonInitials?: string) => void;
   onApplyToWeek?: (shift: Shift, thursdayShift: Shift | null) => void;
+  onApplyOverlayToWeek?: (overlay: Shift) => void;
   employeeId: string;
   date: string;
   x: number;
@@ -29,7 +30,7 @@ interface ShiftSelectionModalProps {
   isHoliday?: boolean;
 }
 
-type ModalStep = 'select' | 'confirm-week' | 'thursday-pick';
+type ModalStep = 'select' | 'confirm-week' | 'thursday-pick' | 'confirm-overlay-week';
 
 const THURSDAY_SHIFTS: Shift[] = [
   { id: 'thu-extended', name: 'Matin étendu', time: '09:00-16:00', type: 'morning', color: '#FFDDC1', textColor: '#333333' },
@@ -44,6 +45,7 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
   onClearShift,
   onSelectCustomShift,
   onApplyToWeek,
+  onApplyOverlayToWeek,
   employeeId,
   date,
   x,
@@ -152,6 +154,8 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
     ? 'Appliquer à la semaine ?'
     : step === 'thursday-pick'
     ? 'Horaire du jeudi'
+    : step === 'confirm-overlay-week'
+    ? 'Ajouter à la semaine ?'
     : `Horaire — ${date}`;
 
   return (
@@ -246,7 +250,14 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
                         key={shift.id}
                         className={`p-2 rounded text-left text-sm transition-all ${active ? 'ring-2 ring-green-500' : 'hover:opacity-80'}`}
                         style={{ backgroundColor: shift.color, color: shift.textColor || '#000' }}
-                        onClick={() => onSelectShift(shift, true, assignedPersonInitials)}
+                        onClick={() => {
+                          if (showWeekApply && onApplyOverlayToWeek && !active) {
+                            setPendingShift(shift);
+                            setStep('confirm-overlay-week');
+                          } else {
+                            onSelectShift(shift, true, assignedPersonInitials);
+                          }
+                        }}
                       >
                         {shift.name} {active && <span>✓</span>}
                       </button>
@@ -307,6 +318,34 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
                 onClick={() => handleConfirmWeek(false)}
               >
                 Non — ce jour seulement
+              </button>
+            </div>
+            <button className="w-full text-xs text-gray-400 underline" onClick={() => setStep('select')}>← Retour</button>
+          </>
+        )}
+
+        {/* ── STEP: confirm-overlay-week ──────────────────────── */}
+        {step === 'confirm-overlay-week' && pendingShift && (
+          <>
+            <div className="rounded p-3 text-center" style={{ backgroundColor: pendingShift.color, color: pendingShift.textColor }}>
+              <div className="font-bold">{pendingShift.name}</div>
+              <div className="text-xs opacity-75">{pendingShift.shortCode}</div>
+            </div>
+            <p className="text-sm text-gray-700">
+              Ajouter cette information à <strong>toute la semaine</strong> (lundi au vendredi) ou seulement à ce jour ?
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                className="p-3 bg-msm-navy text-white rounded font-bold hover:bg-msm-navy-dark text-sm"
+                onClick={() => { onApplyOverlayToWeek!(pendingShift); onClose(); }}
+              >
+                Toute la semaine
+              </button>
+              <button
+                className="p-3 bg-gray-200 text-gray-800 rounded font-bold hover:bg-gray-300 text-sm"
+                onClick={() => { onSelectShift(pendingShift, true, assignedPersonInitials); setStep('select'); }}
+              >
+                Ce jour seulement
               </button>
             </div>
             <button className="w-full text-xs text-gray-400 underline" onClick={() => setStep('select')}>← Retour</button>

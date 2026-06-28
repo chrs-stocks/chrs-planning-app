@@ -18,6 +18,10 @@ export const SHIFT_OPTIONS: Shift[] = [
   { id: 'day', name: 'Journée 12h', time: '07:00-19:00', type: 'day', color: '#DDA0DD', textColor: '#333333' }, // Plum -> Dark Gray
   { id: 'dorine-day', name: 'Journée Dorine', time: '08:30-15:30', type: 'day', color: '#DDA0DD', textColor: '#333333' }, // Dorine's specific day shift
   { id: 'meeting-morning', name: 'Réunion Matin', time: '09:00-13:00', type: 'meeting-morning', color: '#ADD8E6', textColor: '#333333' }, // Light Blue -> Dark Gray
+  // Jeudi spéciaux (créés par le remplissage semaine après-midi)
+  { id: 'thu-extended', name: 'Matin étendu', time: '09:00-16:00', type: 'morning', color: '#FFDDC1', textColor: '#333333' },
+  { id: 'thu-meeting', name: 'Réunion matin', time: '09:00-13:00', type: 'meeting-morning', color: '#ADD8E6', textColor: '#333333' },
+  { id: 'thu-split', name: 'Matin + soir', time: '09:00-12:00 / 16:00-20:00', type: 'custom', color: '#C8E6C9', textColor: '#333333' },
   { id: 'meeting-afternoon', name: 'Réunion Après-midi', time: '13:00-17:00', type: 'meeting-afternoon', color: '#87CEFA', textColor: '#333333' }, // Light Sky Blue -> Dark Gray
   { id: 'off', name: 'Repos', time: '0h', type: 'off', color: '#D3D3D3', textColor: '#333333' }, // Light Gray -> Dark Gray
   { id: 'recovery', name: 'Récup', time: '0h', type: 'recovery', color: '#90EE90', textColor: '#333333' }, // Light Green -> Dark Gray

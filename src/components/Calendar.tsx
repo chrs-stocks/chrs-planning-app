@@ -80,6 +80,10 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
   };
 
   const saveMultipleShifts = async (empId: string, updates: { date: string; primaryShift: Shift }[]) => {
+    // Capture les overlays existants AVANT la mise à jour du state
+    const existingOverlays = new Map(
+      updates.map(({ date: ds }) => [ds, schedule.get(empId)?.get(ds)?.overlays ?? [] as Shift[]])
+    );
     setSchedule(prev => {
       const newSchedule = new Map(prev);
       if (!newSchedule.has(empId)) newSchedule.set(empId, new Map());
@@ -93,7 +97,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
     });
     await Promise.all(
       updates.map(({ date: ds, primaryShift }) =>
-        supabaseService.saveSchedule(empId, ds, 'general', primaryShift, [])
+        supabaseService.saveSchedule(empId, ds, 'general', primaryShift, existingOverlays.get(ds) ?? [])
       )
     );
   };
@@ -115,6 +119,33 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
       }
     }
     await saveMultipleShifts(selectedEmployeeId, updates);
+  };
+
+  const handleApplyOverlayToWeek = async (overlay: Shift) => {
+    if (!selectedEmployeeId || !selectedDate) return;
+    const monday = startOfWeek(parseISO(selectedDate), { weekStartsOn: 1 });
+    const snap = schedule;
+    const saves: { ds: string; primary: Shift | null; overlays: Shift[] }[] = [];
+    for (let i = 0; i < 5; i++) {
+      const ds = format(addDays(monday, i), 'yyyy-MM-dd');
+      const cur = snap.get(selectedEmployeeId)?.get(ds) || { primaryShift: null, overlays: [] };
+      if (!cur.overlays.find(o => o.id === overlay.id)) {
+        saves.push({ ds, primary: cur.primaryShift, overlays: [...cur.overlays, overlay] });
+      }
+    }
+    setSchedule(prev => {
+      const newSchedule = new Map(prev);
+      if (!newSchedule.has(selectedEmployeeId)) newSchedule.set(selectedEmployeeId, new Map());
+      const empMap = new Map(newSchedule.get(selectedEmployeeId)!);
+      saves.forEach(({ ds, primary, overlays }) => empMap.set(ds, { primaryShift: primary, overlays }));
+      newSchedule.set(selectedEmployeeId, empMap);
+      return newSchedule;
+    });
+    await Promise.all(
+      saves.map(({ ds, primary, overlays }) =>
+        supabaseService.saveSchedule(selectedEmployeeId, ds, 'general', primary, overlays)
+      )
+    );
   };
 
   const handleWeekendAutoFill = async (shift: Shift, date: Date) => {
@@ -408,6 +439,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
             onClearShift={handleClearShift}
             onSelectCustomShift={handleSelectCustomShift}
             onApplyToWeek={handleApplyToWeek}
+            onApplyOverlayToWeek={handleApplyOverlayToWeek}
             isHoliday={isFrenchPublicHoliday(parseISO(selectedDate))}
             employeeId={selectedEmployeeId}
             date={selectedDate}
