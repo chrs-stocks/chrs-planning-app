@@ -105,6 +105,9 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
     for (let i = 0; i < 5; i++) {
       const d = addDays(monday, i);
       const ds = format(d, 'yyyy-MM-dd');
+      // Ne jamais écraser un Repos ou Récup existant
+      const existing = schedule.get(selectedEmployeeId)?.get(ds);
+      if (existing?.primaryShift?.id === 'off' || existing?.primaryShift?.id === 'recovery') continue;
       if (i === 3) {
         if (thursdayShift) updates.push({ date: ds, primaryShift: thursdayShift });
       } else {
@@ -240,6 +243,12 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
     return (emp.type === 'general' || emp.type === 'reinforcement' || emp.type === 'interim' || emp.type === 'intern') && visibleEmployeeIds.has(emp.id);
   }).sort((a, b) => (a.order || 0) - (b.order || 0));
 
+  // Shifts pertinents pour le planning général (hors veilleur/cuisinier/astreinte)
+  const GENERAL_SHIFT_IDS = new Set([
+    'morning', 'afternoon', 'day', 'dorine-day', 'meeting-morning', 'off', 'recovery', 'training-week',
+  ]);
+  const generalShiftOptions = SHIFT_OPTIONS.filter(s => GENERAL_SHIFT_IDS.has(s.id) || !!s.isOverlay);
+
   return (
     <div className="p-4 bg-white shadow-md rounded-lg relative printable-area calendar-view">
       <div className="print-only-header">
@@ -356,7 +365,13 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
                     const data = schedule.get(employee.id)?.get(formattedDay);
                     const primaryShift = data?.primaryShift;
                     const overlays = data?.overlays || [];
-                    let displayTime = primaryShift ? (primaryShift.id === 'training-week' && day.getDay() === 3 ? 'FORMATION' : primaryShift.time) : '';
+                    let displayTime = '';
+                    if (primaryShift) {
+                      if (primaryShift.id === 'off') displayTime = 'Repos';
+                      else if (primaryShift.id === 'recovery') displayTime = 'Récup';
+                      else if (primaryShift.id === 'training-week' && day.getDay() === 3) displayTime = 'FORMATION';
+                      else displayTime = primaryShift.time;
+                    }
                     const overlayCodes = overlays.map(o => o.shortCode).filter(Boolean).join(' ');
                     if (overlayCodes) displayTime = `${displayTime}<br />${overlayCodes}`.trim();
                     const hasAbsence = overlays.some(o => ABSENCE_OVERLAY_IDS.has(o.id));
@@ -398,6 +413,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
             date={selectedDate}
             x={modalX}
             y={modalY}
+            customShiftOptions={generalShiftOptions}
             currentPrimaryShift={schedule.get(selectedEmployeeId)?.get(selectedDate)?.primaryShift}
             currentOverlays={schedule.get(selectedEmployeeId)?.get(selectedDate)?.overlays}
           />

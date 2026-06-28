@@ -99,8 +99,14 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
   const safeY = Math.max(8, Math.min(y, (typeof window !== 'undefined' ? window.innerHeight : 600) - 520));
 
   const handleCustomShiftSubmit = () => {
-    if (customTimeInput.trim()) {
-      onSelectCustomShift(customTimeInput.trim(), assignedPersonInitials);
+    const timeStr = customTimeInput.trim();
+    if (!timeStr) return;
+    if (showWeekApply) {
+      const customShift: Shift = { id: 'custom', name: timeStr, time: timeStr, type: 'custom', color: '#CCCCCC', textColor: '#333333' };
+      setPendingShift(customShift);
+      setStep('confirm-week');
+    } else {
+      onSelectCustomShift(timeStr, assignedPersonInitials);
       onClose();
     }
   };
