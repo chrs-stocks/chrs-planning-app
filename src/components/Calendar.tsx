@@ -280,6 +280,13 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
   ]);
   const generalShiftOptions = SHIFT_OPTIONS.filter(s => GENERAL_SHIFT_IDS.has(s.id) || !!s.isOverlay);
 
+  // Shifts spéciaux jeudi
+  const THURSDAY_SHIFT_IDS = new Set(['morning', 'thu-extended', 'thu-meeting', 'thu-split', 'off', 'recovery']);
+  const thursdayShiftOptions = SHIFT_OPTIONS.filter(s => THURSDAY_SHIFT_IDS.has(s.id) || !!s.isOverlay);
+
+  const selectedDow = selectedDate ? parseISO(selectedDate).getDay() : -1;
+  const modalShiftOptions = selectedDow === 4 ? thursdayShiftOptions : generalShiftOptions;
+
   return (
     <div className="p-4 bg-white shadow-md rounded-lg relative printable-area calendar-view">
       <div className="print-only-header">
@@ -445,7 +452,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
             date={selectedDate}
             x={modalX}
             y={modalY}
-            customShiftOptions={generalShiftOptions}
+            customShiftOptions={modalShiftOptions}
             currentPrimaryShift={schedule.get(selectedEmployeeId)?.get(selectedDate)?.primaryShift}
             currentOverlays={schedule.get(selectedEmployeeId)?.get(selectedDate)?.overlays}
           />

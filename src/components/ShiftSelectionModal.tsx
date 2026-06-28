@@ -67,8 +67,8 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
   const dateObj = parseISO(date);
   const dow = dateObj.getDay();
   const isWeekendDay = dow === 0 || dow === 6;
-  // Show week-apply only for general planning (onApplyToWeek provided) on weekdays non-fériés
-  const showWeekApply = !!onApplyToWeek && !isWeekendDay && !isHoliday;
+  // Show week-apply only for general planning (onApplyToWeek provided) on weekdays non-fériés, hors jeudi
+  const showWeekApply = !!onApplyToWeek && !isWeekendDay && !isHoliday && dow !== 4;
 
   useEffect(() => {
     setAllEmployees(loadEmployees());
