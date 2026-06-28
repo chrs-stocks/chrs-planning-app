@@ -148,13 +148,13 @@ const StatisticsPage: React.FC = () => {
       <h2 className="text-2xl font-bold mb-4">Statistiques des Employés</h2>
 
             <div className="flex justify-between items-center mb-4">
-              <button onClick={goToPreviousMonth} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+              <button onClick={goToPreviousMonth} className="px-4 py-2 bg-msm-navy text-white rounded hover:bg-msm-navy-dark">
                 Mois précédent
               </button>
               <h3 className="text-xl font-semibold">
                 Période de {format(multiMonthEmployeeStats[0]?.month || currentDate, 'MMMM yyyy', { locale: fr })} à {format(multiMonthEmployeeStats[multiMonthEmployeeStats.length - 1]?.month || currentDate, 'MMMM yyyy', { locale: fr })}
               </h3>
-              <button onClick={goToNextMonth} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
+              <button onClick={goToNextMonth} className="px-4 py-2 bg-msm-navy text-white rounded hover:bg-msm-navy-dark">
                 Mois suivant
               </button>
             </div>

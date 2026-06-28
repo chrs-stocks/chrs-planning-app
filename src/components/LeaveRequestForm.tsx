@@ -80,7 +80,7 @@ const LeaveRequestForm: React.FC = () => {
   return (
     <div className="max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-md border border-gray-200">
       <div className="flex justify-between items-center mb-6 border-b pb-2">
-        <h2 className="text-2xl font-bold text-blue-700">Fiche de Demande / Signalement</h2>
+        <h2 className="text-2xl font-bold text-msm-navy">Fiche de Demande / Signalement</h2>
         <span className="text-sm bg-gray-100 px-2 py-1 rounded text-gray-500 italic">Document numérique</span>
       </div>
       
@@ -90,7 +90,7 @@ const LeaveRequestForm: React.FC = () => {
           <select 
             value={type} 
             onChange={(e) => setType(e.target.value as RequestType)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2 border"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-msm-navy focus:ring-msm-sky p-2 border"
           >
             <option value="ct">Congé Trimestriel (CT)</option>
             <option value="recup">Récupération</option>
@@ -100,7 +100,7 @@ const LeaveRequestForm: React.FC = () => {
           </select>
         </div>
 
-        <div className="bg-blue-50 p-4 rounded-md text-sm italic text-blue-800 border-l-4 border-blue-400">
+        <div className="bg-msm-navy-light p-4 rounded-md text-sm italic text-msm-navy border-l-4 border-msm-sky">
           {getOfficialText()}
         </div>
 
@@ -160,7 +160,7 @@ const LeaveRequestForm: React.FC = () => {
           <button 
             type="submit"
             disabled={isSubmitting}
-            className={`w-full ${isSubmitting ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'} text-white font-bold py-4 px-4 rounded-md transition-all shadow-lg active:scale-95`}
+            className={`w-full ${isSubmitting ? 'bg-gray-400' : 'bg-msm-navy hover:bg-msm-navy-dark'} text-white font-bold py-4 px-4 rounded-md transition-all shadow-lg active:scale-95`}
           >
             {isSubmitting ? 'Envoi en cours...' : 'Signer et envoyer à la cheffe'}
           </button>

@@ -54,7 +54,7 @@ function App() {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="w-12 h-12 border-4 border-msm-navy border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-gray-600">Chargement...</p>
         </div>
       </div>
@@ -64,7 +64,7 @@ function App() {
   if (!user) {
     return (
       <div className="min-h-screen bg-gray-100">
-        <div className="bg-blue-600 text-white p-4 text-center">
+        <div className="bg-msm-navy text-white p-4 text-center">
           <h1 className="text-xl font-bold">Planning CHRS Maison Saint-Martin</h1>
         </div>
         <Login />
@@ -104,12 +104,12 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-100">
-      <nav className="bg-blue-600 text-white p-4 no-print">
+      <nav className="bg-msm-navy text-white p-4 no-print">
         <div className="container mx-auto flex flex-wrap justify-center gap-2">
 
           <button
             onClick={() => setCurrentView('general')}
-            className={`px-3 py-2 rounded ${currentView === 'general' ? 'bg-blue-800' : 'hover:bg-blue-700'}`}
+            className={`px-3 py-2 rounded ${currentView === 'general' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
           >
             Planning Général
           </button>
@@ -117,7 +117,7 @@ function App() {
           {!isAdmin && (
             <button
               onClick={() => setCurrentView('my-planning')}
-              className={`px-3 py-2 rounded ${currentView === 'my-planning' ? 'bg-blue-800' : 'hover:bg-blue-700'}`}
+              className={`px-3 py-2 rounded ${currentView === 'my-planning' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
             >
               Mon Planning
             </button>
@@ -127,37 +127,37 @@ function App() {
             <>
               <button
                 onClick={() => setCurrentView('veilleurs')}
-                className={`px-3 py-2 rounded ${currentView === 'veilleurs' ? 'bg-blue-800' : 'hover:bg-blue-700'}`}
+                className={`px-3 py-2 rounded ${currentView === 'veilleurs' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
               >
                 Planning Veilleurs
               </button>
               <button
                 onClick={() => setCurrentView('cuisiniers')}
-                className={`px-3 py-2 rounded ${currentView === 'cuisiniers' ? 'bg-blue-800' : 'hover:bg-blue-700'}`}
+                className={`px-3 py-2 rounded ${currentView === 'cuisiniers' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
               >
                 Planning Cuisiniers
               </button>
               <button
                 onClick={() => setCurrentView('employees')}
-                className={`px-3 py-2 rounded ${currentView === 'employees' ? 'bg-blue-800' : 'hover:bg-blue-700'}`}
+                className={`px-3 py-2 rounded ${currentView === 'employees' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
               >
                 Gestion Employés
               </button>
               <button
                 onClick={() => setCurrentView('statistics')}
-                className={`px-3 py-2 rounded ${currentView === 'statistics' ? 'bg-blue-800' : 'hover:bg-blue-700'}`}
+                className={`px-3 py-2 rounded ${currentView === 'statistics' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
               >
                 Statistiques
               </button>
               <button
                 onClick={() => setCurrentView('user-management')}
-                className={`px-3 py-2 rounded ${currentView === 'user-management' ? 'bg-blue-800' : 'hover:bg-blue-700'}`}
+                className={`px-3 py-2 rounded ${currentView === 'user-management' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
               >
                 Gestion Accès
               </button>
               <button
                 onClick={() => setCurrentView('notify')}
-                className={`px-3 py-2 rounded ${currentView === 'notify' ? 'bg-blue-800' : 'hover:bg-blue-700'}`}
+                className={`px-3 py-2 rounded ${currentView === 'notify' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
               >
                 Notifier l'équipe
               </button>
@@ -166,7 +166,7 @@ function App() {
 
           <button
             onClick={() => setCurrentView('requests')}
-            className={`px-3 py-2 rounded font-bold ${currentView === 'requests' ? 'bg-orange-700' : 'bg-orange-500 hover:bg-orange-600'}`}
+            className={`px-3 py-2 rounded font-bold ${currentView === 'requests' ? 'bg-msm-sky-dark' : 'bg-msm-sky hover:bg-msm-sky-dark'}`}
           >
             Faire une demande
           </button>
@@ -174,7 +174,7 @@ function App() {
           {isAdmin && (
             <button
               onClick={() => setCurrentView('admin-requests')}
-              className={`px-3 py-2 rounded font-bold ${currentView === 'admin-requests' ? 'bg-red-700' : 'bg-red-600 hover:bg-red-700 animate-pulse'}`}
+              className={`px-3 py-2 rounded font-bold ${currentView === 'admin-requests' ? 'bg-msm-red-dark' : 'bg-msm-red hover:bg-msm-red-dark animate-pulse'}`}
             >
               Gestion Demandes
             </button>
@@ -182,7 +182,7 @@ function App() {
 
           <button
             onClick={() => setCurrentView('login')}
-            className={`px-3 py-2 rounded ${currentView === 'login' ? 'bg-blue-800' : 'bg-gray-700 hover:bg-gray-800'}`}
+            className={`px-3 py-2 rounded ${currentView === 'login' ? 'bg-msm-navy-dark' : 'bg-gray-700 hover:bg-gray-800'}`}
           >
             {isAdmin ? `Admin${profileName ? ` (${profileName})` : ''}` : profileName || 'Mon compte'}
           </button>

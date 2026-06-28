@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { loadEmployees, saveEmployees, syncEmployeesWithSupabase } from '../data/employeeData';
+import { supabaseService } from '../supabaseService';
 import type { Employee } from '../data/employeeTypes';
 
 const EmployeeManagement: React.FC = () => {
@@ -61,6 +62,7 @@ const EmployeeManagement: React.FC = () => {
     if (!window.confirm('Supprimer cet employé ?')) return;
     const updatedEmployees = employees.filter(emp => emp.id !== id);
     setEmployees(updatedEmployees);
+    await supabaseService.deleteEmployee(id);
     await saveEmployees(updatedEmployees);
   };
 
@@ -85,7 +87,7 @@ const EmployeeManagement: React.FC = () => {
           <input name="order" type="number" value={newEmployee.order} onChange={handleInputChange} placeholder="Ordre (Position)" className="p-2 border rounded" />
           
           <div className="flex space-x-2">
-            <button onClick={editingEmployeeId ? handleUpdateEmployee : handleAddEmployee} className="bg-blue-600 text-white px-4 py-2 rounded flex-1">
+            <button onClick={editingEmployeeId ? handleUpdateEmployee : handleAddEmployee} className="bg-msm-navy text-white px-4 py-2 rounded flex-1">
               {editingEmployeeId ? 'Mettre à jour' : 'Ajouter'}
             </button>
             {editingEmployeeId && <button onClick={() => setEditingEmployeeId(null)} className="bg-gray-400 text-white px-4 py-2 rounded">Annuler</button>}
@@ -114,7 +116,7 @@ const EmployeeManagement: React.FC = () => {
                 <td className="p-2 border text-center"><div className="w-8 h-4 mx-auto rounded" style={{ backgroundColor: emp.color }}></div></td>
                 <td className="p-2 border text-center">{emp.workingHoursPercentage}%</td>
                 <td className="p-2 border text-right space-x-2">
-                  <button onClick={() => handleEditEmployee(emp.id)} className="text-blue-600 underline text-sm">Modifier</button>
+                  <button onClick={() => handleEditEmployee(emp.id)} className="text-msm-navy underline text-sm">Modifier</button>
                   <button onClick={() => handleDeleteEmployee(emp.id)} className="text-red-600 underline text-sm">Supprimer</button>
                 </td>
               </tr>

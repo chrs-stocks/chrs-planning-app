@@ -40,7 +40,7 @@ const AdminRequestsView: React.FC = () => {
 
   return (
     <div className="p-4 bg-white shadow-md rounded-lg">
-      <h2 className="text-2xl font-bold mb-6 text-blue-800">Gestion des Demandes Salariés</h2>
+      <h2 className="text-2xl font-bold mb-6 text-msm-navy">Gestion des Demandes Salariés</h2>
       
       {requests.length === 0 ? (
         <p className="text-gray-500 italic">Aucune demande reçue pour le moment.</p>
@@ -68,7 +68,7 @@ const AdminRequestsView: React.FC = () => {
                     {req.profiles?.name || 'Inconnu'}
                   </td>
                   <td className="p-3">
-                    <span className="uppercase text-xs font-bold bg-blue-50 text-blue-700 px-2 py-1 rounded">
+                    <span className="uppercase text-xs font-bold bg-msm-navy-light text-msm-navy px-2 py-1 rounded">
                       {req.type}
                     </span>
                   </td>
@@ -81,7 +81,7 @@ const AdminRequestsView: React.FC = () => {
                     {req.signature_data && (
                       <div className="mt-2">
                         <details>
-                          <summary className="text-blue-600 cursor-pointer text-xs underline">Voir signature</summary>
+                          <summary className="text-msm-navy cursor-pointer text-xs underline">Voir signature</summary>
                           <img src={req.signature_data} alt="Signature" className="border bg-white mt-1 h-20" />
                         </details>
                       </div>

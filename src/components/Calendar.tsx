@@ -138,7 +138,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
       
       <div className="flex justify-between items-center mb-4 no-print">
         <div className="flex space-x-2">
-          <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Mois précédent</button>
+          <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="px-4 py-2 bg-msm-navy text-white rounded hover:bg-msm-navy-dark">Mois précédent</button>
           {isAdmin && !filterEmployeeName && (
             <button onClick={handleVerify} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-bold animate-pulse">VÉRIFIER LE PLANNING</button>
           )}
@@ -147,7 +147,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
           {filterEmployeeName ? `Mon Planning — ` : ''}{format(currentDate, 'MMMM yyyy', { locale: fr })}
         </h2>
         <div className="flex space-x-2">
-          <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Mois suivant</button>
+          <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="px-4 py-2 bg-msm-navy text-white rounded hover:bg-msm-navy-dark">Mois suivant</button>
           <button onClick={() => window.print()} className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">Imprimer</button>
         </div>
       </div>
@@ -170,10 +170,10 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
 
       {isAdmin && !filterEmployeeName && (
         <div className="flex flex-wrap items-center gap-4 mb-4 no-print bg-gray-50 p-3 rounded border border-gray-200">
-          <span className="font-semibold text-blue-800">Filtrer Colonnes :</span>
+          <span className="font-semibold text-msm-navy">Filtrer Colonnes :</span>
           <div className="flex flex-wrap gap-2">
             {allEmployees.map(emp => (
-              <label key={emp.id} className="flex items-center space-x-1 bg-white px-2 py-1 rounded border text-sm cursor-pointer hover:bg-blue-50">
+              <label key={emp.id} className="flex items-center space-x-1 bg-white px-2 py-1 rounded border text-sm cursor-pointer hover:bg-msm-navy-light">
                 <input type="checkbox" checked={visibleEmployeeIds.has(emp.id)} onChange={() => toggleEmployeeVisibility(emp.id)} className="rounded" />
                 <span>{emp.name}</span>
               </label>
@@ -203,7 +203,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
               return (
                 <tr key={formattedDay} className={isFrenchPublicHoliday(day) ? 'bg-red-50' : isWeekend(day) ? 'bg-gray-50' : ''}>
                   {(isMonday || index === 0) && (
-                    <td className="py-2 px-4 border text-center align-middle bg-blue-50" rowSpan={daysInMonth.filter(d => getISOWeek(d) === weekNumber).length}>{weekNumber}</td>
+                    <td className="py-2 px-4 border text-center align-middle bg-msm-navy-light" rowSpan={daysInMonth.filter(d => getISOWeek(d) === weekNumber).length}>{weekNumber}</td>
                   )}
                   <td className={`py-2 px-4 border w-40 font-semibold ${hasError ? 'bg-red-500 text-white' : ''}`}>
                     {format(day, 'dd EEEE', { locale: fr })}

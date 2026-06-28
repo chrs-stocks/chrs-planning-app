@@ -69,6 +69,18 @@ export const supabaseService = {
     }
   },
 
+  async deleteEmployee(id: string) {
+    const { error } = await supabase
+      .from('employees')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting employee:', error);
+      throw error;
+    }
+  },
+
   // Schedules
   async getSchedules(type: string): Promise<SupabaseSchedule[]> {
     const { data, error } = await supabase

@@ -1,5 +1,17 @@
 @import "tailwindcss";
 
+@theme {
+  --color-msm-navy: #2B3089;
+  --color-msm-navy-dark: #1E2168;
+  --color-msm-navy-light: #EEF0FA;
+  --color-msm-navy-border: #B0B6E6;
+  --color-msm-sky: #3AAEE0;
+  --color-msm-sky-dark: #2A8AB5;
+  --color-msm-sky-light: #E8F5FC;
+  --color-msm-red: #E8002D;
+  --color-msm-red-dark: #B50024;
+}
+
 .hatch-background {
   background-image: repeating-linear-gradient(
     45deg,

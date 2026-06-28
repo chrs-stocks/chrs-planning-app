@@ -129,10 +129,10 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
       </div>
 
       <div className="flex flex-wrap items-center gap-4 mb-4 no-print bg-gray-50 p-3 rounded border border-gray-200">
-        <span className="font-semibold text-blue-800">Filtrer Cuisiniers :</span>
+        <span className="font-semibold text-msm-navy">Filtrer Cuisiniers :</span>
         <div className="flex flex-wrap gap-2">
           {allEmployees.filter(e => e.type === 'cuisinier').map(emp => (
-            <label key={emp.id} className="flex items-center space-x-1 bg-white px-2 py-1 rounded border text-sm cursor-pointer hover:bg-blue-50">
+            <label key={emp.id} className="flex items-center space-x-1 bg-white px-2 py-1 rounded border text-sm cursor-pointer hover:bg-msm-navy-light">
               <input type="checkbox" checked={visibleEmployeeIds.has(emp.id)} onChange={() => toggleEmployeeVisibility(emp.id)} className="rounded" />
               <span>{emp.name}</span>
             </label>

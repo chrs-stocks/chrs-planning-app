@@ -21,25 +21,15 @@ const initialEmployees: Employee[] = (() => {
 })();
 
 export const loadEmployees = (): Employee[] => {
-  // We'll return the cached version from localStorage immediately for performance,
-  // then ideally we should have a way to refresh it from Supabase.
-  // For now, let's keep the synchronous load for the UI, but we can add an async sync.
   const savedEmployeesJSON = localStorage.getItem(LOCAL_STORAGE_KEY);
-  const savedEmployees: Employee[] = savedEmployeesJSON ? JSON.parse(savedEmployeesJSON) : [];
 
-  const finalEmployeesMap = new Map<string, Employee>();
-  savedEmployees.forEach(emp => finalEmployeesMap.set(emp.id, emp));
+  // Premier démarrage : localStorage vide → on retourne la liste initiale codée en dur
+  if (!savedEmployeesJSON) {
+    return initialEmployees;
+  }
 
-  const initialEmployeesMap = new Map<string, Employee>();
-  initialEmployees.forEach(emp => initialEmployeesMap.set(emp.id, emp));
-
-  initialEmployeesMap.forEach((initialEmp, id) => {
-    if (!finalEmployeesMap.has(id)) {
-      finalEmployeesMap.set(id, initialEmp);
-    }
-  });
-
-  return Array.from(finalEmployeesMap.values());
+  // Sinon on respecte exactement ce qui est en localStorage (suppressions incluses)
+  return JSON.parse(savedEmployeesJSON) as Employee[];
 };
 
 export const syncEmployeesWithSupabase = async () => {

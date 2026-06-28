@@ -100,18 +100,18 @@ const UserManagement: React.FC = () => {
   return (
     <div className="p-4 bg-white shadow-md rounded-lg max-w-3xl mx-auto">
       <div className="flex justify-between items-center mb-6 border-b pb-3">
-        <h2 className="text-2xl font-bold text-blue-800">Gestion des accès</h2>
+        <h2 className="text-2xl font-bold text-msm-navy">Gestion des accès</h2>
         <button
           onClick={() => { setShowForm(!showForm); setMessage(null); }}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded font-semibold"
+          className="bg-msm-navy hover:bg-msm-navy-dark text-white px-4 py-2 rounded font-semibold"
         >
           {showForm ? 'Annuler' : '+ Ajouter un utilisateur'}
         </button>
       </div>
 
       {showForm && (
-        <form onSubmit={handleAddUser} className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-5 space-y-4">
-          <h3 className="font-bold text-blue-800">Nouveau compte</h3>
+        <form onSubmit={handleAddUser} className="mb-6 bg-msm-navy-light border border-msm-navy-border rounded-lg p-5 space-y-4">
+          <h3 className="font-bold text-msm-navy">Nouveau compte</h3>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -151,7 +151,7 @@ const UserManagement: React.FC = () => {
             </select>
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded p-3 text-sm text-blue-700">
+          <div className="bg-msm-sky-light border border-msm-navy-border rounded p-3 text-sm text-msm-navy">
             La personne se connectera via un lien envoyé à son email — aucun mot de passe à communiquer.
           </div>
 
@@ -190,7 +190,7 @@ const UserManagement: React.FC = () => {
             <tr key={p.id} className="border-b hover:bg-gray-50">
               <td className="p-3 font-semibold">{p.name}</td>
               <td className="p-3">
-                <span className={`px-2 py-1 rounded-full text-xs font-bold ${p.role === 'admin' ? 'bg-red-100 text-red-800' : 'bg-blue-100 text-blue-800'}`}>
+                <span className={`px-2 py-1 rounded-full text-xs font-bold ${p.role === 'admin' ? 'bg-red-100 text-msm-red' : 'bg-msm-navy-light text-msm-navy'}`}>
                   {ROLE_LABELS[p.role] ?? p.role}
                 </span>
               </td>

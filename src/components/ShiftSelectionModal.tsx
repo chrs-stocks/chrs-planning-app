@@ -149,7 +149,7 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
             {primaryShifts.map((shift) => (
               <button
                 key={shift.id}
-                className={`p-2 rounded text-sm ${currentPrimaryShift?.id === shift.id ? 'border-2 border-blue-500' : ''}`}
+                className={`p-2 rounded text-sm ${currentPrimaryShift?.id === shift.id ? 'border-2 border-msm-navy' : ''}`}
                 style={{ backgroundColor: shift.color, color: shift.textColor || '#000000' }}
                 onClick={() => {
                   const shiftToPass = { ...shift };

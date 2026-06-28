@@ -92,7 +92,7 @@ const NotificationSender: React.FC = () => {
 
   return (
     <div className="p-4 bg-white shadow-md rounded-lg max-w-2xl mx-auto">
-      <h2 className="text-2xl font-bold text-blue-800 mb-1">Notifier les salariés</h2>
+      <h2 className="text-2xl font-bold text-msm-navy mb-1">Notifier les salariés</h2>
       <p className="text-gray-500 text-sm mb-6">Envoyez un email à votre équipe pour les informer d'une mise à jour du planning.</p>
 
       {loadingRecipients ? (
@@ -109,7 +109,7 @@ const NotificationSender: React.FC = () => {
             <div className="flex justify-between items-center mb-2">
               <label className="font-semibold text-gray-700">Destinataires</label>
               <div className="space-x-3 text-sm">
-                <button type="button" onClick={selectAll}   className="text-blue-600 hover:underline">Tous</button>
+                <button type="button" onClick={selectAll}   className="text-msm-navy hover:underline">Tous</button>
                 <button type="button" onClick={deselectAll} className="text-gray-500 hover:underline">Aucun</button>
               </div>
             </div>
@@ -124,7 +124,7 @@ const NotificationSender: React.FC = () => {
                   />
                   <span className="flex-1 font-medium">{r.name}</span>
                   <span className="text-xs text-gray-400">{r.email}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${r.role === 'admin' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'}`}>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${r.role === 'admin' ? 'bg-red-100 text-msm-red' : 'bg-msm-navy-light text-msm-navy'}`}>
                     {r.role === 'admin' ? 'Direction' : 'Employé'}
                   </span>
                 </label>
@@ -178,7 +178,7 @@ const NotificationSender: React.FC = () => {
           <button
             type="submit"
             disabled={sending || selected.size === 0}
-            className={`w-full py-3 rounded-lg font-bold text-white transition-all ${sending || selected.size === 0 ? 'bg-gray-300' : 'bg-blue-600 hover:bg-blue-700'}`}
+            className={`w-full py-3 rounded-lg font-bold text-white transition-all ${sending || selected.size === 0 ? 'bg-gray-300' : 'bg-msm-navy hover:bg-msm-navy-dark'}`}
           >
             {sending ? `Envoi en cours... (${results.length}/${selected.size})` : `Envoyer à ${selected.size} personne${selected.size > 1 ? 's' : ''}`}
           </button>
