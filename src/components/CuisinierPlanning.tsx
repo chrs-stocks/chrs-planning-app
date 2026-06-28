@@ -5,7 +5,7 @@ import { addMonths, subMonths, getISOWeek } from 'date-fns';
 import type { Shift } from '../data/shifts';
 import { getContrastingTextColor } from '../utils/colorUtils';
 import { ShiftSelectionModal } from './ShiftSelectionModal';
-import { SHIFT_OPTIONS } from '../data/shifts';
+import { SHIFT_OPTIONS, ABSENCE_OVERLAY_IDS } from '../data/shifts';
 import Notes from './Notes';
 import { loadEmployees } from '../data/employeeData';
 import { useScheduleData } from '../hooks/useScheduleData';
@@ -178,9 +178,11 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
                   let displayTime = primaryShift ? primaryShift.name : '';
                   const overlayCodes = overlays.map(o => o.shortCode).filter(Boolean).join(' ');
                   if (overlayCodes) displayTime = `${displayTime}<br />${overlayCodes}`.trim();
-                  const displayColor = primaryShift ? employee.color : isFrenchPublicHoliday(day) ? '#FFDDE0' : '#FFFFFF';
+                  const hasAbsence = overlays.some(o => ABSENCE_OVERLAY_IDS.has(o.id));
+                  const displayColor = (primaryShift || hasAbsence) ? employee.color : isFrenchPublicHoliday(day) ? '#FFDDE0' : '#FFFFFF';
+                  const hatchClass = hasAbsence ? 'hatch-absence' : overlays.length > 0 ? 'hatch-background' : '';
                   return (
-                    <td key={formattedDay} className={`py-2 px-1 border cursor-pointer text-center text-xs ${overlays.length > 0 ? 'hatch-background' : ''}`} style={{ backgroundColor: displayColor, color: getContrastingTextColor(displayColor), height: '35px' }} onClick={(event) => handleCellClick(employee.id, formattedDay, event)} dangerouslySetInnerHTML={{ __html: displayTime }}></td>
+                    <td key={formattedDay} className={`py-2 px-1 border cursor-pointer text-center text-xs ${hatchClass}`} style={{ backgroundColor: displayColor, color: getContrastingTextColor(displayColor), height: '35px' }} onClick={(event) => handleCellClick(employee.id, formattedDay, event)} dangerouslySetInnerHTML={{ __html: displayTime }}></td>
                   );
                 })}
               </tr>

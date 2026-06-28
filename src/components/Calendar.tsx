@@ -6,6 +6,7 @@ import { loadEmployees } from '../data/employeeData';
 import type { Employee } from '../data/employeeTypes';
 import { addMonths, subMonths, getISOWeek, startOfMonth, endOfMonth } from 'date-fns';
 import type { Shift } from '../data/shifts';
+import { ABSENCE_OVERLAY_IDS } from '../data/shifts';
 import { ShiftSelectionModal } from './ShiftSelectionModal';
 import Notes from './Notes';
 import { useScheduleData } from '../hooks/useScheduleData';
@@ -216,9 +217,11 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
                     let displayTime = primaryShift ? (primaryShift.id === 'training-week' && day.getDay() === 3 ? 'FORMATION' : primaryShift.time) : '';
                     const overlayCodes = overlays.map(o => o.shortCode).filter(Boolean).join(' ');
                     if (overlayCodes) displayTime = `${displayTime}<br />${overlayCodes}`.trim();
-                    const displayColor = primaryShift ? employee.color : 'transparent';
+                    const hasAbsence = overlays.some(o => ABSENCE_OVERLAY_IDS.has(o.id));
+                    const displayColor = (primaryShift || hasAbsence) ? employee.color : 'transparent';
+                    const hatchClass = hasAbsence ? 'hatch-absence' : overlays.length > 0 ? 'hatch-background' : '';
                     return (
-                      <td key={employee.id} className={`py-2 px-4 border border-gray-400 cursor-pointer text-center w-40 ${overlays.length > 0 ? 'hatch-background' : ''}`} style={{ backgroundColor: displayColor, color: getContrastingTextColor(displayColor) }} onClick={(event) => handleCellClick(employee.id, formattedDay, event)} dangerouslySetInnerHTML={{ __html: displayTime }}></td>
+                      <td key={employee.id} className={`py-2 px-4 border border-gray-400 cursor-pointer text-center w-40 ${hatchClass}`} style={{ backgroundColor: displayColor, color: getContrastingTextColor(displayColor) }} onClick={(event) => handleCellClick(employee.id, formattedDay, event)} dangerouslySetInnerHTML={{ __html: displayTime }}></td>
                     );
                   })}
                 </tr>

@@ -60,3 +60,16 @@ export const SHIFT_OPTIONS: Shift[] = [
 export const getShiftById = (id: string): Shift | undefined => {
   return SHIFT_OPTIONS.find(shift => shift.id === id);
 };
+
+export const ABSENCE_OVERLAY_IDS = new Set([
+  'overlay-sick-leave',
+  'overlay-paid-leave',
+  'overlay-time-off-in-lieu',
+  'overlay-off',
+  'overlay-trimestriel-leave',
+  'overlay-parental-leave',
+  'overlay-family-leave',
+  'overlay-unpaid-leave',
+  'overlay-family-reason',
+  'overlay-sick-child',
+]);

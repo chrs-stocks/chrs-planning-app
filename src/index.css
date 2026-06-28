@@ -22,3 +22,14 @@
   );
   background-size: 7px 7px;
 }
+
+.hatch-absence {
+  background-image: repeating-linear-gradient(
+    45deg,
+    rgba(0,0,0,0.22) 0px,
+    rgba(0,0,0,0.22) 2px,
+    transparent 2px,
+    transparent 7px
+  );
+  background-size: 9px 9px;
+}
