@@ -4,9 +4,9 @@ import { fr } from 'date-fns/locale';
 import { getContrastingTextColor } from '../utils/colorUtils';
 import { loadEmployees } from '../data/employeeData';
 import type { Employee } from '../data/employeeTypes';
-import { addMonths, subMonths, addWeeks, subWeeks, getISOWeek, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
+import { addMonths, subMonths, addWeeks, subWeeks, getISOWeek, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval, parseISO, addDays, subDays } from 'date-fns';
 import type { Shift } from '../data/shifts';
-import { ABSENCE_OVERLAY_IDS } from '../data/shifts';
+import { SHIFT_OPTIONS, ABSENCE_OVERLAY_IDS } from '../data/shifts';
 import { ShiftSelectionModal } from './ShiftSelectionModal';
 import Notes from './Notes';
 import { useScheduleData } from '../hooks/useScheduleData';
@@ -31,6 +31,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
   const [validationErrors, setValidationErrors] = useState<ValidationNote[]>([]);
   const [showValidation, setShowValidation] = useState(false);
   const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
+  const [alertCells, setAlertCells] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const employees = loadEmployees();
@@ -72,35 +73,125 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
     setSelectedEmployeeId(employeeId);
     setSelectedDate(date);
     const rect = event.currentTarget.getBoundingClientRect();
-    setModalX(rect.left + window.scrollX);
-    setModalY(rect.top + window.scrollY);
+    setModalX(rect.left);
+    setModalY(rect.bottom);
     setIsModalOpen(true);
     setModalKey(prev => prev + 1);
   };
 
-  const handleSelectShift = async (shift: Shift) => {
-    if (selectedEmployeeId && selectedDate) {
-      let updatedDayData: { primaryShift: Shift | null, overlays: Shift[] } | null = null;
-      setSchedule((prevSchedule) => {
-        const newSchedule = new Map(prevSchedule);
-        if (!newSchedule.has(selectedEmployeeId)) newSchedule.set(selectedEmployeeId, new Map());
-        const empDaySchedule = new Map(newSchedule.get(selectedEmployeeId)!);
-        const current = empDaySchedule.get(selectedDate) || { primaryShift: null, overlays: [] };
-        if (shift.isOverlay) {
-          const exists = current.overlays.findIndex((o: Shift) => o.id === shift.id);
-          const overlays = exists > -1 ? current.overlays.filter((o: Shift) => o.id !== shift.id) : [...current.overlays, shift];
-          updatedDayData = { ...current, overlays };
-        } else {
-          updatedDayData = { ...current, primaryShift: shift };
-        }
-        empDaySchedule.set(selectedDate, updatedDayData);
-        newSchedule.set(selectedEmployeeId, empDaySchedule);
-        return newSchedule;
+  const saveMultipleShifts = async (empId: string, updates: { date: string; primaryShift: Shift }[]) => {
+    setSchedule(prev => {
+      const newSchedule = new Map(prev);
+      if (!newSchedule.has(empId)) newSchedule.set(empId, new Map());
+      const empMap = new Map(newSchedule.get(empId)!);
+      updates.forEach(({ date: ds, primaryShift }) => {
+        const cur = empMap.get(ds) || { primaryShift: null, overlays: [] };
+        empMap.set(ds, { ...cur, primaryShift });
       });
-      if (updatedDayData) {
-        const data = updatedDayData as { primaryShift: Shift | null, overlays: Shift[] };
-        await supabaseService.saveSchedule(selectedEmployeeId, selectedDate, 'general', data.primaryShift, data.overlays);
+      newSchedule.set(empId, empMap);
+      return newSchedule;
+    });
+    await Promise.all(
+      updates.map(({ date: ds, primaryShift }) =>
+        supabaseService.saveSchedule(empId, ds, 'general', primaryShift, [])
+      )
+    );
+  };
+
+  const handleApplyToWeek = async (shift: Shift, thursdayShift: Shift | null) => {
+    if (!selectedEmployeeId || !selectedDate) return;
+    const monday = startOfWeek(parseISO(selectedDate), { weekStartsOn: 1 });
+    const updates: { date: string; primaryShift: Shift }[] = [];
+    for (let i = 0; i < 5; i++) {
+      const d = addDays(monday, i);
+      const ds = format(d, 'yyyy-MM-dd');
+      if (i === 3) {
+        if (thursdayShift) updates.push({ date: ds, primaryShift: thursdayShift });
+      } else {
+        updates.push({ date: ds, primaryShift: shift });
       }
+    }
+    await saveMultipleShifts(selectedEmployeeId, updates);
+  };
+
+  const handleWeekendAutoFill = async (shift: Shift, date: Date) => {
+    if (!selectedEmployeeId) return;
+    const dow = date.getDay();
+    const saturday = dow === 6 ? date : subDays(date, 1);
+    const sunday = addDays(saturday, 1);
+    const friday = subDays(saturday, 1);
+    const monday = addDays(saturday, 2);
+    const tuesday = addDays(saturday, 3);
+    const thursday = subDays(saturday, 2);
+
+    const offShift = SHIFT_OPTIONS.find(s => s.id === 'off')!;
+    const recoveryShift = SHIFT_OPTIONS.find(s => s.id === 'recovery')!;
+
+    await saveMultipleShifts(selectedEmployeeId, [
+      { date: format(saturday, 'yyyy-MM-dd'), primaryShift: shift },
+      { date: format(sunday, 'yyyy-MM-dd'), primaryShift: shift },
+      { date: format(friday, 'yyyy-MM-dd'), primaryShift: offShift },
+      { date: format(monday, 'yyyy-MM-dd'), primaryShift: recoveryShift },
+      { date: format(tuesday, 'yyyy-MM-dd'), primaryShift: recoveryShift },
+    ]);
+
+    const thursdayDs = format(thursday, 'yyyy-MM-dd');
+    const thursdayData = schedule.get(selectedEmployeeId)?.get(thursdayDs);
+    if (thursdayData?.primaryShift?.id === 'afternoon') {
+      setAlertCells(prev => new Set([...prev, `${selectedEmployeeId}_${thursdayDs}`]));
+    }
+  };
+
+  const handleHolidayAutoFill = async (date: Date) => {
+    if (!selectedEmployeeId) return;
+    const dayShift = SHIFT_OPTIONS.find(s => s.id === 'day')!;
+    const offShift = SHIFT_OPTIONS.find(s => s.id === 'off')!;
+    const recoveryShift = SHIFT_OPTIONS.find(s => s.id === 'recovery')!;
+
+    await saveMultipleShifts(selectedEmployeeId, [
+      { date: format(date, 'yyyy-MM-dd'), primaryShift: dayShift },
+      { date: format(subDays(date, 1), 'yyyy-MM-dd'), primaryShift: offShift },
+      { date: format(addDays(date, 1), 'yyyy-MM-dd'), primaryShift: recoveryShift },
+    ]);
+  };
+
+  const handleSelectShift = async (shift: Shift) => {
+    if (!selectedEmployeeId || !selectedDate) return;
+
+    const date = parseISO(selectedDate);
+    const dow = date.getDay();
+
+    if (!shift.isOverlay) {
+      if (dow === 6 || dow === 0) {
+        await handleWeekendAutoFill(shift, date);
+        return;
+      }
+      if (isFrenchPublicHoliday(date)) {
+        await handleHolidayAutoFill(date);
+        return;
+      }
+    }
+
+    let updatedDayData: { primaryShift: Shift | null, overlays: Shift[] } | null = null;
+    setSchedule((prevSchedule) => {
+      const newSchedule = new Map(prevSchedule);
+      if (!newSchedule.has(selectedEmployeeId)) newSchedule.set(selectedEmployeeId, new Map());
+      const empDaySchedule = new Map(newSchedule.get(selectedEmployeeId)!);
+      const current = empDaySchedule.get(selectedDate) || { primaryShift: null, overlays: [] };
+      if (shift.isOverlay) {
+        const exists = current.overlays.findIndex((o: Shift) => o.id === shift.id);
+        const overlays = exists > -1 ? current.overlays.filter((o: Shift) => o.id !== shift.id) : [...current.overlays, shift];
+        updatedDayData = { ...current, overlays };
+      } else {
+        updatedDayData = { ...current, primaryShift: shift };
+      }
+      empDaySchedule.set(selectedDate, updatedDayData);
+      newSchedule.set(selectedEmployeeId, empDaySchedule);
+      return newSchedule;
+    });
+    if (updatedDayData) {
+      const data = updatedDayData as { primaryShift: Shift | null, overlays: Shift[] };
+      await supabaseService.saveSchedule(selectedEmployeeId, selectedDate, 'general', data.primaryShift, data.overlays);
     }
   };
 
@@ -271,8 +362,19 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
                     const hasAbsence = overlays.some(o => ABSENCE_OVERLAY_IDS.has(o.id));
                     const displayColor = (primaryShift || hasAbsence) ? employee.color : 'transparent';
                     const hatchClass = hasAbsence ? 'hatch-absence' : overlays.length > 0 ? 'hatch-background' : '';
+                    const cellAlertKey = `${employee.id}_${formattedDay}`;
+                    const isAlertCell = alertCells.has(cellAlertKey);
                     return (
-                      <td key={employee.id} className={`py-2 px-4 border border-gray-400 cursor-pointer text-center w-40 ${hatchClass}`} style={{ backgroundColor: displayColor, color: getContrastingTextColor(displayColor) }} onClick={(event) => handleCellClick(employee.id, formattedDay, event)} dangerouslySetInnerHTML={{ __html: displayTime }}></td>
+                      <td
+                        key={employee.id}
+                        className={`py-2 px-4 border border-gray-400 cursor-pointer text-center w-40 ${hatchClass} ${isAlertCell ? 'animate-pulse ring-2 ring-inset ring-yellow-400' : ''}`}
+                        style={{ backgroundColor: displayColor, color: getContrastingTextColor(displayColor) }}
+                        onClick={(event) => {
+                          if (isAlertCell) setAlertCells(prev => { const s = new Set(prev); s.delete(cellAlertKey); return s; });
+                          handleCellClick(employee.id, formattedDay, event);
+                        }}
+                        dangerouslySetInnerHTML={{ __html: displayTime }}
+                      />
                     );
                   })}
                 </tr>
@@ -283,7 +385,22 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
       </div>
 
       {isModalOpen && selectedEmployeeId && selectedDate && (
-        <ShiftSelectionModal key={modalKey} isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSelectShift={(s) => { handleSelectShift(s); setIsModalOpen(false); }} onClearShift={handleClearShift} onSelectCustomShift={handleSelectCustomShift} employeeId={selectedEmployeeId} date={selectedDate} x={modalX} y={modalY} currentPrimaryShift={schedule.get(selectedEmployeeId)?.get(selectedDate)?.primaryShift} currentOverlays={schedule.get(selectedEmployeeId)?.get(selectedDate)?.overlays} />
+        <ShiftSelectionModal
+            key={modalKey}
+            isOpen={isModalOpen}
+            onClose={() => setIsModalOpen(false)}
+            onSelectShift={(s) => { handleSelectShift(s); setIsModalOpen(false); }}
+            onClearShift={handleClearShift}
+            onSelectCustomShift={handleSelectCustomShift}
+            onApplyToWeek={handleApplyToWeek}
+            isHoliday={isFrenchPublicHoliday(parseISO(selectedDate))}
+            employeeId={selectedEmployeeId}
+            date={selectedDate}
+            x={modalX}
+            y={modalY}
+            currentPrimaryShift={schedule.get(selectedEmployeeId)?.get(selectedDate)?.primaryShift}
+            currentOverlays={schedule.get(selectedEmployeeId)?.get(selectedDate)?.overlays}
+          />
       )}
       <Notes currentDate={currentDate} context="general" />
     </div>

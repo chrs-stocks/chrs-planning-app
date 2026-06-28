@@ -47,8 +47,8 @@ const VeilleurPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHol
     setSelectedEmployeeId(employeeId);
     setSelectedDate(date);
     const rect = event.currentTarget.getBoundingClientRect();
-    setModalX(rect.left + window.scrollX);
-    setModalY(rect.top + window.scrollY);
+    setModalX(rect.left);
+    setModalY(rect.bottom);
     setIsModalOpen(true);
   };
 
