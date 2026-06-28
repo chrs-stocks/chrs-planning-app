@@ -156,41 +156,48 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
         <div className="print-subtitle">{format(currentDate, 'MMMM yyyy', { locale: fr })}</div>
       </div>
       
-      <div className="flex flex-wrap justify-between items-center mb-4 gap-2 no-print">
-        <div className="flex space-x-2">
-          <button onClick={goToPrev} className="px-4 py-2 bg-msm-navy text-white rounded hover:bg-msm-navy-dark">
-            {viewMode === 'week' ? 'Semaine préc.' : 'Mois précédent'}
-          </button>
-          {isAdmin && !filterEmployeeName && (
-            <button onClick={handleVerify} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-bold animate-pulse">VÉRIFIER</button>
-          )}
-        </div>
+      <div className="no-print mb-4 space-y-2">
+        {/* Titre */}
+        <h2 className="text-xl font-bold text-center">
+          {filterEmployeeName ? 'Mon Planning — ' : ''}{periodLabel}
+        </h2>
 
-        <div className="flex flex-col items-center gap-1">
-          <h2 className="text-xl font-bold">
-            {filterEmployeeName ? `Mon Planning — ` : ''}{periodLabel}
-          </h2>
-          <div className="flex rounded overflow-hidden border border-msm-navy text-sm">
-            <button
-              onClick={() => setViewMode('month')}
-              className={`px-3 py-1 ${viewMode === 'month' ? 'bg-msm-navy text-white' : 'bg-white text-msm-navy hover:bg-msm-navy-light'}`}
-            >
-              Mois
-            </button>
-            <button
-              onClick={() => setViewMode('week')}
-              className={`px-3 py-1 ${viewMode === 'week' ? 'bg-msm-navy text-white' : 'bg-white text-msm-navy hover:bg-msm-navy-light'}`}
-            >
-              Semaine
+        {/* Barre de contrôles */}
+        <div className="flex flex-wrap justify-between items-center gap-2">
+          <button onClick={goToPrev} className="px-4 py-2 bg-msm-navy text-white rounded hover:bg-msm-navy-dark">
+            ← {viewMode === 'week' ? 'Sem. préc.' : 'Mois préc.'}
+          </button>
+
+          <div className="flex items-center gap-2 flex-wrap justify-center">
+            {/* Toggle Mois / Semaine */}
+            <div className="flex rounded overflow-hidden border border-msm-navy text-sm font-semibold">
+              <button
+                onClick={() => setViewMode('month')}
+                className={`px-4 py-2 ${viewMode === 'month' ? 'bg-msm-navy text-white' : 'bg-white text-msm-navy hover:bg-msm-navy-light'}`}
+              >
+                Mois
+              </button>
+              <button
+                onClick={() => setViewMode('week')}
+                className={`px-4 py-2 ${viewMode === 'week' ? 'bg-msm-navy text-white' : 'bg-white text-msm-navy hover:bg-msm-navy-light'}`}
+              >
+                Semaine
+              </button>
+            </div>
+
+            {isAdmin && !filterEmployeeName && (
+              <button onClick={handleVerify} className="px-4 py-2 bg-msm-red text-white rounded hover:bg-msm-red-dark font-bold animate-pulse">
+                Vérifier
+              </button>
+            )}
+            <button onClick={() => window.print()} className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
+              Imprimer
             </button>
           </div>
-        </div>
 
-        <div className="flex space-x-2">
           <button onClick={goToNext} className="px-4 py-2 bg-msm-navy text-white rounded hover:bg-msm-navy-dark">
-            {viewMode === 'week' ? 'Semaine suiv.' : 'Mois suivant'}
+            {viewMode === 'week' ? 'Sem. suiv.' : 'Mois suiv.'} →
           </button>
-          <button onClick={() => window.print()} className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">Imprimer</button>
         </div>
       </div>
 

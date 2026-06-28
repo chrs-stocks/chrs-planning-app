@@ -26,13 +26,19 @@ const UserManagement: React.FC = () => {
 
   const fetchProfiles = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, name, role')
-      .order('role', { ascending: false });
-
-    if (!error && data) setProfiles(data as Profile[]);
-    setLoading(false);
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, name, role')
+        .order('role', { ascending: false });
+      if (error) throw error;
+      if (data) setProfiles(data as Profile[]);
+    } catch (err) {
+      console.error('Erreur chargement profils:', err);
+      setMessage({ type: 'error', text: 'Impossible de charger les utilisateurs. Vérifiez votre connexion.' });
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
