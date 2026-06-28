@@ -4,7 +4,7 @@ import { fr } from 'date-fns/locale';
 import { getContrastingTextColor } from '../utils/colorUtils';
 import { loadEmployees } from '../data/employeeData';
 import type { Employee } from '../data/employeeTypes';
-import { addMonths, subMonths, getISOWeek, startOfMonth, endOfMonth } from 'date-fns';
+import { addMonths, subMonths, addWeeks, subWeeks, getISOWeek, startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns';
 import type { Shift } from '../data/shifts';
 import { ABSENCE_OVERLAY_IDS } from '../data/shifts';
 import { ShiftSelectionModal } from './ShiftSelectionModal';
@@ -30,6 +30,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
   const [visibleEmployeeIds, setVisibleEmployeeIds] = useState<Set<string>>(new Set());
   const [validationErrors, setValidationErrors] = useState<ValidationNote[]>([]);
   const [showValidation, setShowValidation] = useState(false);
+  const [viewMode, setViewMode] = useState<'month' | 'week'>('month');
 
   useEffect(() => {
     const employees = loadEmployees();
@@ -126,6 +127,24 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
   const month = currentDate.getMonth();
   const daysInMonth = getDaysInMonth(year, month);
 
+  const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
+  const daysToShow = viewMode === 'week'
+    ? eachDayOfInterval({ start: weekStart, end: weekEnd })
+    : daysInMonth;
+
+  const goToPrev = () => viewMode === 'week'
+    ? setCurrentDate(subWeeks(currentDate, 1))
+    : setCurrentDate(subMonths(currentDate, 1));
+
+  const goToNext = () => viewMode === 'week'
+    ? setCurrentDate(addWeeks(currentDate, 1))
+    : setCurrentDate(addMonths(currentDate, 1));
+
+  const periodLabel = viewMode === 'week'
+    ? `Semaine ${getISOWeek(weekStart)} — ${format(weekStart, 'dd MMM', { locale: fr })} au ${format(weekEnd, 'dd MMM yyyy', { locale: fr })}`
+    : format(currentDate, 'MMMM yyyy', { locale: fr });
+
   const filteredEmployees = allEmployees.filter(emp => {
     return (emp.type === 'general' || emp.type === 'reinforcement' || emp.type === 'interim' || emp.type === 'intern') && visibleEmployeeIds.has(emp.id);
   }).sort((a, b) => (a.order || 0) - (b.order || 0));
@@ -137,18 +156,40 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
         <div className="print-subtitle">{format(currentDate, 'MMMM yyyy', { locale: fr })}</div>
       </div>
       
-      <div className="flex justify-between items-center mb-4 no-print">
+      <div className="flex flex-wrap justify-between items-center mb-4 gap-2 no-print">
         <div className="flex space-x-2">
-          <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="px-4 py-2 bg-msm-navy text-white rounded hover:bg-msm-navy-dark">Mois précédent</button>
+          <button onClick={goToPrev} className="px-4 py-2 bg-msm-navy text-white rounded hover:bg-msm-navy-dark">
+            {viewMode === 'week' ? 'Semaine préc.' : 'Mois précédent'}
+          </button>
           {isAdmin && !filterEmployeeName && (
-            <button onClick={handleVerify} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-bold animate-pulse">VÉRIFIER LE PLANNING</button>
+            <button onClick={handleVerify} className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 font-bold animate-pulse">VÉRIFIER</button>
           )}
         </div>
-        <h2 className="text-2xl font-bold">
-          {filterEmployeeName ? `Mon Planning — ` : ''}{format(currentDate, 'MMMM yyyy', { locale: fr })}
-        </h2>
+
+        <div className="flex flex-col items-center gap-1">
+          <h2 className="text-xl font-bold">
+            {filterEmployeeName ? `Mon Planning — ` : ''}{periodLabel}
+          </h2>
+          <div className="flex rounded overflow-hidden border border-msm-navy text-sm">
+            <button
+              onClick={() => setViewMode('month')}
+              className={`px-3 py-1 ${viewMode === 'month' ? 'bg-msm-navy text-white' : 'bg-white text-msm-navy hover:bg-msm-navy-light'}`}
+            >
+              Mois
+            </button>
+            <button
+              onClick={() => setViewMode('week')}
+              className={`px-3 py-1 ${viewMode === 'week' ? 'bg-msm-navy text-white' : 'bg-white text-msm-navy hover:bg-msm-navy-light'}`}
+            >
+              Semaine
+            </button>
+          </div>
+        </div>
+
         <div className="flex space-x-2">
-          <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="px-4 py-2 bg-msm-navy text-white rounded hover:bg-msm-navy-dark">Mois suivant</button>
+          <button onClick={goToNext} className="px-4 py-2 bg-msm-navy text-white rounded hover:bg-msm-navy-dark">
+            {viewMode === 'week' ? 'Semaine suiv.' : 'Mois suivant'}
+          </button>
           <button onClick={() => window.print()} className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">Imprimer</button>
         </div>
       </div>
@@ -195,7 +236,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
             </tr>
           </thead>
           <tbody>
-            {daysInMonth.map((day, index) => {
+            {daysToShow.map((day, index) => {
               const formattedDay = format(day, 'yyyy-MM-dd');
               const weekNumber = getISOWeek(day);
               const isMonday = day.getDay() === 1;
@@ -204,7 +245,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
               return (
                 <tr key={formattedDay} className={isFrenchPublicHoliday(day) ? 'bg-red-50' : isWeekend(day) ? 'bg-gray-50' : ''}>
                   {(isMonday || index === 0) && (
-                    <td className="py-2 px-4 border text-center align-middle bg-msm-navy-light" rowSpan={daysInMonth.filter(d => getISOWeek(d) === weekNumber).length}>{weekNumber}</td>
+                    <td className="py-2 px-4 border text-center align-middle bg-msm-navy-light" rowSpan={daysToShow.filter(d => getISOWeek(d) === weekNumber).length}>{weekNumber}</td>
                   )}
                   <td className={`py-2 px-4 border w-40 font-semibold ${hasError ? 'bg-red-500 text-white' : ''}`}>
                     {format(day, 'dd EEEE', { locale: fr })}
