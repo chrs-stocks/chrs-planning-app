@@ -112,7 +112,7 @@ const VeilleurPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHol
   const veilleurs = allEmployees.filter(emp => emp.type === 'veilleur' && visibleEmployeeIds.has(emp.id)).sort((a, b) => {
     if (a.id === 'veilleur-interim') return 1;
     if (b.id === 'veilleur-interim') return -1;
-    return 0;
+    return (a.order || 0) - (b.order || 0);
   });
 
   const days = getDaysInMonth(currentDate.getFullYear(), currentDate.getMonth());

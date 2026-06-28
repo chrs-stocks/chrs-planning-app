@@ -107,7 +107,7 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
     }
   };
 
-  const cuisiniers = allEmployees.filter(emp => emp.type === 'cuisinier' && visibleEmployeeIds.has(emp.id));
+  const cuisiniers = allEmployees.filter(emp => emp.type === 'cuisinier' && visibleEmployeeIds.has(emp.id)).sort((a, b) => (a.order || 0) - (b.order || 0));
   const days = getDaysInMonth(currentDate.getFullYear(), currentDate.getMonth());
   const weeks: { [key: number]: number } = {};
   days.forEach(day => { const w = getISOWeek(day); weeks[w] = (weeks[w] || 0) + 1; });
