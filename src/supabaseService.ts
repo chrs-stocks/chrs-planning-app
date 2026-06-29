@@ -103,7 +103,9 @@ export const supabaseService = {
         employee_id: employeeId,
         date: date,
         schedule_type: type,
-        primary_shift_id: primaryShift?.id || null,
+        primary_shift_id: primaryShift
+          ? (primaryShift.id === 'custom' ? `custom:${primaryShift.time}` : primaryShift.id)
+          : null,
         overlays: overlays,
       }, {
         onConflict: 'employee_id,date,schedule_type'
@@ -120,7 +122,9 @@ export const supabaseService = {
       employee_id: s.employeeId,
       date: s.date,
       schedule_type: s.type,
-      primary_shift_id: s.primaryShift?.id || null,
+      primary_shift_id: s.primaryShift
+        ? (s.primaryShift.id === 'custom' ? `custom:${s.primaryShift.time}` : s.primaryShift.id)
+        : null,
       overlays: s.overlays,
     }));
 

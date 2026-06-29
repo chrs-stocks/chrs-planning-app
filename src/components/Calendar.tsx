@@ -96,7 +96,10 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
     setSaveStatus('saving');
     clearTimeout(saveTimerRef.current);
     try {
-      await fn();
+      const timeout = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout Supabase (10s)')), 10000)
+      );
+      await Promise.race([fn(), timeout]);
       setSaveStatus('saved');
       saveTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2500);
     } catch (err) {

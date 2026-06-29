@@ -72,21 +72,19 @@ export const validateSchedules = (
   const notes: ValidationNote[] = [];
   const daysInPeriod = eachDayOfInterval({ start: startDate, end: endDate });
 
-  // Salariés du planning général (sans stagiaires pour les checks de couverture)
+  // Pour les checks de couverture collective (règles 1 & 2) : tout le monde compte
   const generalAll = employees.filter(
     e => e.type === 'general' || e.type === 'reinforcement' || e.type === 'interim'
   );
-  // Tous pour les checks individuels (y compris intern pour détecter les absences)
-  const generalAndIntern = employees.filter(
-    e => ['general', 'reinforcement', 'interim', 'intern'].includes(e.type)
-  );
+  // Pour les checks individuels (règles 3, 4, 5) : uniquement les salariés permanents
+  const generalOnly = employees.filter(e => e.type === 'general');
 
-  // Pré-calcul : qui travaille chaque samedi (shift 'day' non absent)
+  // Pré-calcul : qui travaille chaque samedi — uniquement salariés permanents (règles 3 & 4)
   const saturdayWorkers = new Map<string, string[]>(); // 'yyyy-MM-dd' → [empId]
   daysInPeriod.forEach(day => {
     if (day.getDay() !== 6) return;
     const ds = format(day, 'yyyy-MM-dd');
-    const workers = generalAll
+    const workers = generalOnly
       .filter(emp => {
         const d = getData(generalSchedule, emp.id, ds);
         return d?.primaryShift?.id === 'day' && !isAbsent(d);
@@ -204,10 +202,9 @@ export const validateSchedules = (
         });
       }
 
-      // ── RÈGLE 5 : absences non renseignées ──────────────────────────────────
-      // Si un salarié n'a ni shift ni overlay le jour ouvrable, simple warning
+      // ── RÈGLE 5 : absences non renseignées (salariés permanents uniquement) ──
       if (dow >= 1 && dow <= 5) {
-        generalAndIntern.forEach(emp => {
+        generalOnly.forEach(emp => {
           const d = getData(generalSchedule, emp.id, ds);
           if (!d || (!d.primaryShift && d.overlays.length === 0)) {
             notes.push({

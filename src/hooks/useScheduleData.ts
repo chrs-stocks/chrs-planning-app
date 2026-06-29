@@ -53,6 +53,15 @@ const deserializeCuisinierVeilleurSchedule = (scheduleObj: Record<string, Record
   return map;
 };
 
+const resolveShiftId = (shiftId: string | null): Shift | null => {
+  if (!shiftId) return null;
+  if (shiftId.startsWith('custom:')) {
+    const time = shiftId.slice(7);
+    return { id: 'custom', name: time, time, type: 'custom', color: '#CCCCCC', textColor: '#333333' };
+  }
+  return getShiftById(shiftId) || null;
+};
+
 // Helper to convert Supabase rows back to the Map structure
 const mapSupabaseToSchedule = (rows: SupabaseSchedule[]): CuisinierVeilleurSchedule => {
   const map = new Map<string, Map<string, { primaryShift: Shift | null, overlays: Shift[] }>>();
@@ -62,7 +71,7 @@ const mapSupabaseToSchedule = (rows: SupabaseSchedule[]): CuisinierVeilleurSched
     }
     const dateMap = map.get(row.employee_id)!;
     dateMap.set(row.date, {
-      primaryShift: row.primary_shift_id ? (getShiftById(row.primary_shift_id) || null) : null,
+      primaryShift: resolveShiftId(row.primary_shift_id),
       overlays: (row.overlays || []).map((o: string | Shift) => typeof o === 'string' ? getShiftById(o) : o).filter((o): o is Shift => !!o)
     });
   });
