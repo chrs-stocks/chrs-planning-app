@@ -34,15 +34,38 @@ const isAbsent = (data: DayData | undefined): boolean => {
   );
 };
 
+// Extrait les plages horaires "HH:MM-HH:MM" d'un champ time (gère aussi les shifts
+// à plusieurs segments comme "09:00-12:00 / 16:00-20:00").
+const parseTimeRanges = (time: string): Array<[number, number]> => {
+  const ranges: Array<[number, number]> = [];
+  const re = /(\d{1,2}):(\d{2})\s*-\s*(\d{1,2}):(\d{2})/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(time))) {
+    ranges.push([Number(m[1]) * 60 + Number(m[2]), Number(m[3]) * 60 + Number(m[4])]);
+  }
+  return ranges;
+};
+
+// Un shift couvre une plage donnée si un de ses segments horaires la couvre entièrement.
+// On se base d'abord sur les identifiants connus (rapide, fiable), et on retombe sur une
+// analyse du champ `time` pour les horaires personnalisés (ex: "13:00-20:00" saisi
+// librement), afin de ne pas signaler une fausse alerte quand la couverture est en fait bonne.
+const shiftCoversRange = (shift: Shift, rangeStart: number, rangeEnd: number): boolean =>
+  parseTimeRanges(shift.time).some(([s, e]) => s <= rangeStart && e >= rangeEnd);
+
 // Shift couvre la plage matinale (≤ 07h → ≥ 13h)
-const coversMorning = (id: string) => ['morning', 'day'].includes(id);
+const coversMorning = (shift: Shift) =>
+  ['morning', 'day'].includes(shift.id) || shiftCoversRange(shift, 7 * 60, 13 * 60);
 
 // Shift couvre la plage après-midi (≤ 13h → ≥ 19h)
-const coversAfternoon = (id: string) => ['afternoon', 'day'].includes(id);
+const coversAfternoon = (shift: Shift) =>
+  ['afternoon', 'day'].includes(shift.id) || shiftCoversRange(shift, 13 * 60, 19 * 60);
 
-// Shift couvre 16h-20h (présence soir) : après-midi classique (13:00-20:00) ou
-// "Matin + soir" du jeudi (09:00-12:00 / 16:00-20:00)
-const coversEvening = (id: string) => id === 'afternoon' || id === 'thu-split';
+// Shift couvre 16h-20h (présence soir) : après-midi classique (13:00-20:00),
+// "Matin + soir" du jeudi (09:00-12:00 / 16:00-20:00), ou tout horaire personnalisé
+// couvrant réellement ce créneau.
+const coversEvening = (shift: Shift) =>
+  shift.id === 'afternoon' || shift.id === 'thu-split' || shiftCoversRange(shift, 16 * 60, 20 * 60);
 
 // Salarié en repos (vendredi avant weekend)
 const isOffDay = (data: DayData | undefined): boolean => {
@@ -124,8 +147,8 @@ export const validateSchedules = (
         generalAll.forEach(emp => {
           const d = getData(generalSchedule, emp.id, ds);
           if (d?.primaryShift && !isAbsent(d)) {
-            if (coversMorning(d.primaryShift.id)) hasMorning = true;
-            if (coversAfternoon(d.primaryShift.id)) hasAfternoon = true;
+            if (coversMorning(d.primaryShift)) hasMorning = true;
+            if (coversAfternoon(d.primaryShift)) hasAfternoon = true;
           }
         });
 
@@ -157,7 +180,7 @@ export const validateSchedules = (
         let hasEvening = false;
         generalAll.forEach(emp => {
           const d = getData(generalSchedule, emp.id, ds);
-          if (d?.primaryShift && !isAbsent(d) && coversEvening(d.primaryShift.id)) {
+          if (d?.primaryShift && !isAbsent(d) && coversEvening(d.primaryShift)) {
             hasEvening = true;
           }
         });
