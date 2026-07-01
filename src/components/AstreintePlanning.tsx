@@ -194,7 +194,7 @@ const AstreintePlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
           <tbody>
             {astreintes.map((employee) => (
               <tr key={employee.id}>
-                <td className="py-2 px-4 border w-40 font-semibold" style={{ backgroundColor: employee.color + '33' }}>{employee.name}</td>
+                <td className="py-0.5 px-4 border w-40 font-semibold text-sm" style={{ backgroundColor: employee.color + '33' }}>{employee.name}</td>
                 {days.map(day => {
                   const formattedDay = format(day, 'yyyy-MM-dd');
                   const dayData = schedule.get(employee.id)?.get(formattedDay);
@@ -207,7 +207,7 @@ const AstreintePlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
                   const displayColor = (primaryShift || hasAbsence) ? employee.color : isFrenchPublicHoliday(day) ? '#FFDDE0' : '#FFFFFF';
                   const hatchClass = hasAbsence ? 'hatch-absence' : overlays.length > 0 ? 'hatch-background' : '';
                   return (
-                    <td key={formattedDay} className={`py-2 px-1 border cursor-pointer text-center text-xs ${hatchClass}`} style={{ backgroundColor: displayColor, color: getContrastingTextColor(displayColor), height: '35px' }} onClick={(event) => handleCellClick(employee.id, formattedDay, event)} dangerouslySetInnerHTML={{ __html: displayTime }}></td>
+                    <td key={formattedDay} className={`py-0.5 px-1 border cursor-pointer text-center text-xs leading-tight ${hatchClass}`} style={{ backgroundColor: displayColor, color: getContrastingTextColor(displayColor), height: '22px' }} onClick={(event) => handleCellClick(employee.id, formattedDay, event)} dangerouslySetInnerHTML={{ __html: displayTime }}></td>
                   );
                 })}
               </tr>
