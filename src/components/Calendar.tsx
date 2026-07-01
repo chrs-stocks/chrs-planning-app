@@ -135,12 +135,15 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
   const handleApplyToWeek = async (shift: Shift, thursdayShift: Shift | null) => {
     if (!selectedEmployeeId || !selectedDate) return;
     const monday = startOfWeek(parseISO(selectedDate), { weekStartsOn: 1 });
+    const nonWorkingDays = allEmployees.find(e => e.id === selectedEmployeeId)?.nonWorkingDays ?? [];
     const updates: { date: string; primaryShift: Shift }[] = [];
     for (let i = 0; i < 5; i++) {
       const d = addDays(monday, i);
       const ds = format(d, 'yyyy-MM-dd');
       // Jour férié : la case reste vide (traitée manuellement au cas par cas)
       if (isFrenchPublicHoliday(d)) continue;
+      // Jour non travaillé pour ce salarié (ex: Florence le vendredi) : ne pas remplir
+      if (nonWorkingDays.includes(d.getDay())) continue;
       // Ne jamais écraser un Repos ou Récup existant
       const existing = schedule.get(selectedEmployeeId)?.get(ds);
       if (existing?.primaryShift?.id === 'off' || existing?.primaryShift?.id === 'recovery') continue;
@@ -156,11 +159,13 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
   const handleApplyOverlayToWeek = async (overlay: Shift) => {
     if (!selectedEmployeeId || !selectedDate) return;
     const monday = startOfWeek(parseISO(selectedDate), { weekStartsOn: 1 });
+    const nonWorkingDays = allEmployees.find(e => e.id === selectedEmployeeId)?.nonWorkingDays ?? [];
     const snap = schedule;
     const saves: { ds: string; primary: Shift | null; overlays: Shift[] }[] = [];
     for (let i = 0; i < 5; i++) {
       const d = addDays(monday, i);
       if (isFrenchPublicHoliday(d)) continue;
+      if (nonWorkingDays.includes(d.getDay())) continue;
       const ds = format(d, 'yyyy-MM-dd');
       const cur = snap.get(selectedEmployeeId)?.get(ds) || { primaryShift: null, overlays: [] };
       if (!cur.overlays.find(o => o.id === overlay.id)) {
@@ -455,7 +460,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
                     if (overlayCodes) displayTime = `${displayTime}<br />${overlayCodes}`.trim();
                     const hasAbsence = overlays.some(o => ABSENCE_OVERLAY_IDS.has(o.id));
                     const displayColor = (primaryShift || hasAbsence) ? employee.color : 'transparent';
-                    const hatchClass = hasAbsence ? 'hatch-absence' : overlays.length > 0 ? 'hatch-background' : '';
+                    const hatchClass = hasAbsence ? 'hatch-absence' : overlays.some(o => !o.id.startsWith('custom-overlay-')) ? 'hatch-background' : '';
                     const cellAlertKey = `${employee.id}_${formattedDay}`;
                     const isAlertCell = alertCells.has(cellAlertKey);
                     return (

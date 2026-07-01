@@ -206,7 +206,7 @@ const AstreintePlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
                   if (overlayCodes) displayTime = `${displayTime}<br />${overlayCodes}`.trim();
                   const hasAbsence = overlays.some(o => ABSENCE_OVERLAY_IDS.has(o.id));
                   const displayColor = (primaryShift || hasAbsence) ? employee.color : isFrenchPublicHoliday(day) ? '#FFDDE0' : '#FFFFFF';
-                  const hatchClass = hasAbsence ? 'hatch-absence' : overlays.length > 0 ? 'hatch-background' : '';
+                  const hatchClass = hasAbsence ? 'hatch-absence' : overlays.some(o => !o.id.startsWith('custom-overlay-')) ? 'hatch-background' : '';
                   return (
                     <td key={formattedDay} className={`py-0.5 px-1 border cursor-pointer text-center text-xs leading-tight ${hatchClass}`} style={{ backgroundColor: displayColor, color: getContrastingTextColor(displayColor), height: '22px' }} onClick={(event) => handleCellClick(employee.id, formattedDay, event)} dangerouslySetInnerHTML={{ __html: displayTime }}></td>
                   );
