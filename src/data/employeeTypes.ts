@@ -16,7 +16,6 @@ export interface Employee {
   name: string;
   type: EmployeeType;
   color: string;
-  initials?: string; // Optional initials for display
   workingHoursPercentage?: number; // New optional field for working hours percentage
   order?: number; // Nouveau : pour définir l'ordre des colonnes
   plannings?: PlanningKey[]; // Planning(s) affecté(s) — voir normalizeEmployee pour la migration

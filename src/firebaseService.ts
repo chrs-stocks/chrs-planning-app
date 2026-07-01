@@ -51,7 +51,6 @@ export const firebaseService = {
           type: emp.type,
           color: emp.color,
           workingHoursPercentage: emp.workingHoursPercentage,
-          initials: emp.initials ?? '',
           order: emp.order ?? 0,
           plannings: emp.plannings ?? [],
         })
