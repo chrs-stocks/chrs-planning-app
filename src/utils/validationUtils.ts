@@ -2,6 +2,7 @@ import type { Employee } from '../data/employeeTypes';
 import type { Shift } from '../data/shifts';
 import { ABSENCE_OVERLAY_IDS } from '../data/shifts';
 import { eachDayOfInterval, format, addDays, subDays } from 'date-fns';
+import { isFrenchPublicHoliday } from './dateUtils';
 
 type DayData = { primaryShift: Shift | null; overlays: Shift[] };
 type GeneralSchedule = Map<string, Map<string, DayData>>;
@@ -39,8 +40,9 @@ const coversMorning = (id: string) => ['morning', 'day'].includes(id);
 // Shift couvre la plage après-midi (≤ 13h → ≥ 19h)
 const coversAfternoon = (id: string) => ['afternoon', 'day'].includes(id);
 
-// Shift couvre 16h-20h (présence soir)
-const coversEvening = (id: string) => id === 'afternoon'; // 13:00-20:00
+// Shift couvre 16h-20h (présence soir) : après-midi classique (13:00-20:00) ou
+// "Matin + soir" du jeudi (09:00-12:00 / 16:00-20:00)
+const coversEvening = (id: string) => id === 'afternoon' || id === 'thu-split';
 
 // Salarié en repos (vendredi avant weekend)
 const isOffDay = (data: DayData | undefined): boolean => {
@@ -98,9 +100,24 @@ export const validateSchedules = (
       const dow = day.getDay(); // 0=dim, 1=lun, …, 6=sam
       const ds = format(day, 'yyyy-MM-dd');
       const disp = format(day, 'dd/MM/yyyy');
+      const isHoliday = isFrenchPublicHoliday(day);
 
       // ── RÈGLE 1 : couverture 07h-19h (hors jeudi) ──────────────────────────
-      if (dow !== 4) {
+      // Jour férié : effectif réduit à 1 salarié/intérimaire sur un créneau unique
+      // (souvent 12h) — on exige juste une présence, pas la couverture matin+après-midi.
+      if (isHoliday) {
+        const hasPresence = generalAll.some(emp => {
+          const d = getData(generalSchedule, emp.id, ds);
+          return !!d?.primaryShift && !isAbsent(d);
+        });
+        if (!hasPresence) {
+          notes.push({
+            date: ds,
+            message: `${disp} (jour férié) : aucune présence renseignée.`,
+            severity: 'warning',
+          });
+        }
+      } else if (dow !== 4) {
         let hasMorning = false;
         let hasAfternoon = false;
 
@@ -135,7 +152,8 @@ export const validateSchedules = (
       }
 
       // ── RÈGLE 2 : jeudi — présence 16h-20h obligatoire ─────────────────────
-      if (dow === 4) {
+      // (ignorée un jour férié : effectif réduit, couvert par la RÈGLE 1 ci-dessus)
+      if (dow === 4 && !isHoliday) {
         let hasEvening = false;
         generalAll.forEach(emp => {
           const d = getData(generalSchedule, emp.id, ds);
@@ -202,7 +220,9 @@ export const validateSchedules = (
       }
 
       // ── RÈGLE 5 : absences non renseignées (salariés permanents uniquement) ──
-      if (dow >= 1 && dow <= 5) {
+      // Jour férié : aucun shift n'est attendu pour les salariés qui ne sont pas de
+      // permanence, comme un samedi/dimanche.
+      if (dow >= 1 && dow <= 5 && !isHoliday) {
         generalOnly.forEach(emp => {
           if (emp.nonWorkingDays?.includes(dow)) return; // ex: Florence ne travaille pas le vendredi
           const d = getData(generalSchedule, emp.id, ds);
