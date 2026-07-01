@@ -5,11 +5,18 @@ import type { Employee, PlanningKey } from '../data/employeeTypes';
 import { PLANNING_LABELS } from '../data/employeeTypes';
 
 const ALL_PLANNINGS: PlanningKey[] = ['general', 'veilleur', 'cuisinier', 'astreinte'];
+const WEEKDAYS: { value: number; label: string }[] = [
+  { value: 1, label: 'Lun' },
+  { value: 2, label: 'Mar' },
+  { value: 3, label: 'Mer' },
+  { value: 4, label: 'Jeu' },
+  { value: 5, label: 'Ven' },
+];
 
 const EmployeeManagement: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [newEmployee, setNewEmployee] = useState<Omit<Employee, 'id'>>({
-    name: '', type: 'general', color: '#CCCCCC', workingHoursPercentage: 100, order: 0, plannings: ['general']
+    name: '', type: 'general', color: '#CCCCCC', workingHoursPercentage: 100, order: 0, plannings: ['general'], nonWorkingDays: []
   });
   const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
 
@@ -44,6 +51,16 @@ const EmployeeManagement: React.FC = () => {
     });
   };
 
+  const toggleNonWorkingDay = (day: number) => {
+    setNewEmployee(prev => {
+      const current = prev.nonWorkingDays ?? [];
+      const nonWorkingDays = current.includes(day)
+        ? current.filter(d => d !== day)
+        : [...current, day];
+      return { ...prev, nonWorkingDays };
+    });
+  };
+
   const reindex = (list: Employee[]): Employee[] =>
     list.map((emp, i) => ({ ...emp, order: i }));
 
@@ -75,7 +92,7 @@ const EmployeeManagement: React.FC = () => {
     const updated = reindex([...employees, employeeToAdd]);
     setEmployees(updated);
     await saveEmployees(updated);
-    setNewEmployee({ name: '', type: 'general', color: '#CCCCCC', workingHoursPercentage: 100, order: 0, plannings: ['general'] });
+    setNewEmployee({ name: '', type: 'general', color: '#CCCCCC', workingHoursPercentage: 100, order: 0, plannings: ['general'], nonWorkingDays: [] });
   };
 
   const handleEditEmployee = (id: string) => {
@@ -93,7 +110,7 @@ const EmployeeManagement: React.FC = () => {
     );
     setEmployees(updated);
     await saveEmployees(updated);
-    setNewEmployee({ name: '', type: 'general', color: '#CCCCCC', workingHoursPercentage: 100, order: 0, plannings: ['general'] });
+    setNewEmployee({ name: '', type: 'general', color: '#CCCCCC', workingHoursPercentage: 100, order: 0, plannings: ['general'], nonWorkingDays: [] });
     setEditingEmployeeId(null);
   };
 
@@ -138,6 +155,23 @@ const EmployeeManagement: React.FC = () => {
                     className="rounded"
                   />
                   <span>{PLANNING_LABELS[planning]}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="md:col-span-3">
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Jours non travaillés (pas d'alerte "jour non rempli") :</label>
+            <div className="flex flex-wrap gap-2">
+              {WEEKDAYS.map(({ value, label }) => (
+                <label key={value} className="flex items-center space-x-1 bg-white px-2 py-1 rounded border text-sm cursor-pointer hover:bg-msm-navy-light">
+                  <input
+                    type="checkbox"
+                    checked={(newEmployee.nonWorkingDays ?? []).includes(value)}
+                    onChange={() => toggleNonWorkingDay(value)}
+                    className="rounded"
+                  />
+                  <span>{label}</span>
                 </label>
               ))}
             </div>

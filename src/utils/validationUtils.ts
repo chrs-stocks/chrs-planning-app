@@ -204,6 +204,7 @@ export const validateSchedules = (
       // ── RÈGLE 5 : absences non renseignées (salariés permanents uniquement) ──
       if (dow >= 1 && dow <= 5) {
         generalOnly.forEach(emp => {
+          if (emp.nonWorkingDays?.includes(dow)) return; // ex: Florence ne travaille pas le vendredi
           const d = getData(generalSchedule, emp.id, ds);
           if (!d || (!d.primaryShift && d.overlays.length === 0)) {
             notes.push({

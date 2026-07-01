@@ -55,6 +55,7 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
   isHoliday = false,
 }) => {
   const [customTimeInput, setCustomTimeInput] = useState('');
+  const [customOverlayInput, setCustomOverlayInput] = useState('');
   const [assignedPersonInitials, setAssignedPersonInitials] = useState('');
   const [step, setStep] = useState<ModalStep>('select');
   const [pendingShift, setPendingShift] = useState<Shift | null>(null);
@@ -70,6 +71,7 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
       setStep('select');
       setPendingShift(null);
       setCustomTimeInput('');
+      setCustomOverlayInput('');
     }
   }, [isOpen]);
 
@@ -89,6 +91,34 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
   const maxModalHeight = Math.min(viewportH - 2 * MARGIN, 640);
   const safeX = Math.max(MARGIN, Math.min(x, viewportW - MODAL_W - MARGIN));
   const safeY = Math.max(MARGIN, Math.min(y, viewportH - maxModalHeight - MARGIN));
+
+  // Les libellés d'overlay sont injectés via dangerouslySetInnerHTML dans les plannings :
+  // on échappe le texte libre saisi pour empêcher toute injection HTML.
+  const escapeHtml = (s: string) =>
+    s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+  const handleCustomOverlaySubmit = () => {
+    const text = customOverlayInput.trim();
+    if (!text) return;
+    const safeText = escapeHtml(text);
+    const overlay: Shift = {
+      id: `custom-overlay-${Date.now()}`,
+      name: safeText,
+      time: '',
+      type: 'overlay',
+      color: '#FFE8A3',
+      textColor: '#333333',
+      shortCode: safeText,
+      isOverlay: true,
+    };
+    if (showWeekApply && onApplyOverlayToWeek) {
+      setPendingShift(overlay);
+      setStep('confirm-overlay-week');
+    } else {
+      onSelectShift(overlay, true, assignedPersonInitials);
+      setCustomOverlayInput('');
+    }
+  };
 
   const handleCustomShiftSubmit = () => {
     const timeStr = customTimeInput.trim();
@@ -250,6 +280,22 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
                 </div>
               </div>
             )}
+
+            {/* Overlay: mot libre */}
+            <div>
+              <div className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Mot libre (overlay)</div>
+              <input
+                type="text"
+                placeholder="ex: Formation, RDV médical…"
+                className="w-full p-2 border rounded text-sm mb-2"
+                value={customOverlayInput}
+                onChange={e => setCustomOverlayInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleCustomOverlaySubmit()}
+              />
+              <button className="w-full p-2 rounded text-sm bg-amber-100 text-amber-800 hover:bg-amber-200" onClick={handleCustomOverlaySubmit}>
+                Ajouter en overlay
+              </button>
+            </div>
 
             {/* Custom time */}
             <div>

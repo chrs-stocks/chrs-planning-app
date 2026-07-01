@@ -139,6 +139,8 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
     for (let i = 0; i < 5; i++) {
       const d = addDays(monday, i);
       const ds = format(d, 'yyyy-MM-dd');
+      // Jour férié : la case reste vide (traitée manuellement au cas par cas)
+      if (isFrenchPublicHoliday(d)) continue;
       // Ne jamais écraser un Repos ou Récup existant
       const existing = schedule.get(selectedEmployeeId)?.get(ds);
       if (existing?.primaryShift?.id === 'off' || existing?.primaryShift?.id === 'recovery') continue;
@@ -157,7 +159,9 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
     const snap = schedule;
     const saves: { ds: string; primary: Shift | null; overlays: Shift[] }[] = [];
     for (let i = 0; i < 5; i++) {
-      const ds = format(addDays(monday, i), 'yyyy-MM-dd');
+      const d = addDays(monday, i);
+      if (isFrenchPublicHoliday(d)) continue;
+      const ds = format(d, 'yyyy-MM-dd');
       const cur = snap.get(selectedEmployeeId)?.get(ds) || { primaryShift: null, overlays: [] };
       if (!cur.overlays.find(o => o.id === overlay.id)) {
         saves.push({ ds, primary: cur.primaryShift, overlays: [...cur.overlays, overlay] });

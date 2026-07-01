@@ -19,4 +19,5 @@ export interface Employee {
   workingHoursPercentage?: number; // New optional field for working hours percentage
   order?: number; // Nouveau : pour définir l'ordre des colonnes
   plannings?: PlanningKey[]; // Planning(s) affecté(s) — voir normalizeEmployee pour la migration
+  nonWorkingDays?: number[]; // Jours de la semaine jamais travaillés (0=dim … 6=sam) : pas d'alerte "jour non rempli" ces jours-là
 }
