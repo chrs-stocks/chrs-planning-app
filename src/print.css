@@ -77,6 +77,20 @@
     height: 15pt !important;
   }
 
+  /* Colonnes Sem./Date réduites au strict nécessaire (juste un numéro
+     de semaine et une date) pour laisser un maximum de largeur aux
+     colonnes des employés — sinon leurs horaires étaient trop serrés
+     pour rester lisibles, voire ne tenaient pas sur une page. Ciblage
+     via <colgroup> plutôt que nth-child : la colonne Sem. n'est
+     présente que sur les lignes de lundi (rowSpan), ce qui décale les
+     positions nth-child d'une ligne à l'autre. */
+  .calendar-view table col.col-week {
+    width: 2.5% !important;
+  }
+  .calendar-view table col.col-date {
+    width: 7% !important;
+  }
+
   * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;

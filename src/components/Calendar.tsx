@@ -404,6 +404,13 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
 
       <div className="overflow-x-auto">
         <table className="min-w-full table-fixed bg-white border-collapse border border-gray-200">
+          <colgroup>
+            <col className="col-week" />
+            <col className="col-date" />
+            {filteredEmployees.map((employee) => (
+              <col key={employee.id} />
+            ))}
+          </colgroup>
           <thead>
             <tr>
               <th className="py-2 px-4 border text-left w-16">Sem.</th>
