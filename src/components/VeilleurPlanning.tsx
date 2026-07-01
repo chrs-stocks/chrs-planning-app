@@ -48,6 +48,20 @@ const VeilleurPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHol
     localStorage.setItem('veilleurSchedule', JSON.stringify(obj));
   }, [schedule]);
 
+  // Empêche de fermer/recharger la page pendant qu'une sauvegarde Firebase est en cours :
+  // sinon la requête réseau est interrompue avant d'atteindre le serveur, et la modification
+  // (qui semblait "sauvegardée" localement) est perdue sans qu'aucune erreur ne s'affiche.
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (saveStatus === 'saving') {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [saveStatus]);
+
   const trySave = async (fn: () => Promise<void>) => {
     setSaveStatus('saving');
     clearTimeout(saveTimerRef.current);
@@ -85,33 +99,32 @@ const VeilleurPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHol
 
   const handleSelectShift = async (shift: Shift, isOverlay: boolean, interimInitials?: string) => {
     if (selectedEmployeeId && selectedDate) {
-      let finalData: { primaryShift: Shift | null, overlays: Shift[] } | null = null;
+      // Calculé AVANT setSchedule (et non muté depuis l'intérieur de son updater) : React
+      // n'exécute pas forcément l'updater de façon synchrone, donc une variable mutée à
+      // l'intérieur n'est pas fiable à relire juste après l'appel — ce qui empêchait la
+      // sauvegarde Firestore de se déclencher.
+      const currentDayData = schedule.get(selectedEmployeeId)?.get(selectedDate) || { primaryShift: null, overlays: [] };
+      let shiftToStore = { ...shift };
+      if (selectedEmployeeId === 'veilleur-interim' && interimInitials) shiftToStore = { ...shiftToStore, interimInitials };
+
+      const finalData: { primaryShift: Shift | null, overlays: Shift[] } = isOverlay
+        ? {
+            ...currentDayData,
+            overlays: currentDayData.overlays.some(o => o.id === shiftToStore.id)
+              ? currentDayData.overlays.filter(o => o.id !== shiftToStore.id)
+              : [...currentDayData.overlays, shiftToStore],
+          }
+        : { ...currentDayData, primaryShift: shiftToStore };
+
       setSchedule((prevSchedule) => {
         const newSchedule = new Map(prevSchedule);
         if (!newSchedule.has(selectedEmployeeId)) newSchedule.set(selectedEmployeeId, new Map());
         const employeeDayData = new Map(newSchedule.get(selectedEmployeeId)!);
-        const currentDayData = employeeDayData.get(selectedDate) || { primaryShift: null, overlays: [] };
-        let shiftToStore = { ...shift };
-        if (selectedEmployeeId === 'veilleur-interim' && interimInitials) shiftToStore = { ...shiftToStore, interimInitials };
-        
-        let updated: { primaryShift: Shift | null, overlays: Shift[] };
-        if (isOverlay) {
-          const existingOverlayIndex = currentDayData.overlays.findIndex((o: Shift) => o.id === shiftToStore.id);
-          const updatedOverlays = existingOverlayIndex > -1 ? currentDayData.overlays.filter((o: Shift) => o.id !== shiftToStore.id) : [...currentDayData.overlays, shiftToStore];
-          updated = { ...currentDayData, overlays: updatedOverlays };
-        } else {
-          updated = { ...currentDayData, primaryShift: shiftToStore };
-        }
-        
-        finalData = updated;
-        employeeDayData.set(selectedDate, updated);
+        employeeDayData.set(selectedDate, finalData);
         newSchedule.set(selectedEmployeeId, employeeDayData);
         return newSchedule;
       });
-      if (finalData) {
-        const data = finalData as { primaryShift: Shift | null, overlays: Shift[] };
-        await trySave(() => firebaseService.saveSchedule(selectedEmployeeId, selectedDate, 'veilleur', data.primaryShift, data.overlays));
-      }
+      await trySave(() => firebaseService.saveSchedule(selectedEmployeeId, selectedDate, 'veilleur', finalData.primaryShift, finalData.overlays));
     }
   };
 

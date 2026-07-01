@@ -10,8 +10,11 @@ import { auth } from './firebaseClient'
 // Attendre que Firebase Auth ait restauré la session persistée avant de lire Firestore :
 // sinon la requête part avant que l'utilisateur soit authentifié côté règles de sécurité,
 // et échoue avec "Missing or insufficient permissions" (l'app retombe alors sur un cache
-// local potentiellement obsolète).
-const unsubscribeInitialAuth = onAuthStateChanged(auth, () => {
+// local potentiellement obsolète). Tant qu'aucun utilisateur n'est connecté (page de
+// connexion), on ne tente rien : les règles exigent une authentification, la requête
+// échouerait à coup sûr et ne serait jamais retentée après la connexion.
+const unsubscribeInitialAuth = onAuthStateChanged(auth, firebaseUser => {
+  if (!firebaseUser) return;
   unsubscribeInitialAuth();
   syncEmployeesWithFirebase().catch(console.error);
 });

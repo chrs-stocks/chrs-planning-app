@@ -48,6 +48,20 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
     localStorage.setItem('cuisinierSchedule', JSON.stringify(obj));
   }, [schedule]);
 
+  // Empêche de fermer/recharger la page pendant qu'une sauvegarde Firebase est en cours :
+  // sinon la requête réseau est interrompue avant d'atteindre le serveur, et la modification
+  // (qui semblait "sauvegardée" localement) est perdue sans qu'aucune erreur ne s'affiche.
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (saveStatus === 'saving') {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [saveStatus]);
+
   const trySave = async (fn: () => Promise<void>) => {
     setSaveStatus('saving');
     clearTimeout(saveTimerRef.current);
@@ -85,31 +99,29 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
 
   const handleSelectShift = async (shift: Shift, isOverlay: boolean) => {
     if (selectedEmployeeId && selectedDate) {
-      let finalData: { primaryShift: Shift | null, overlays: Shift[] } | null = null;
+      // Calculé AVANT setSchedule (et non muté depuis l'intérieur de son updater) : React
+      // n'exécute pas forcément l'updater de façon synchrone, donc une variable mutée à
+      // l'intérieur n'est pas fiable à relire juste après l'appel — ce qui empêchait la
+      // sauvegarde Firestore de se déclencher.
+      const cur = schedule.get(selectedEmployeeId)?.get(selectedDate) || { primaryShift: null, overlays: [] };
+      const finalData: { primaryShift: Shift | null, overlays: Shift[] } = isOverlay
+        ? {
+            ...cur,
+            overlays: cur.overlays.some(o => o.id === shift.id)
+              ? cur.overlays.filter(o => o.id !== shift.id)
+              : [...cur.overlays, shift],
+          }
+        : { ...cur, primaryShift: shift };
+
       setSchedule((prevSchedule) => {
         const newSchedule = new Map(prevSchedule);
         if (!newSchedule.has(selectedEmployeeId)) newSchedule.set(selectedEmployeeId, new Map());
         const empDayData = new Map(newSchedule.get(selectedEmployeeId)!);
-        const cur = empDayData.get(selectedDate) || { primaryShift: null, overlays: [] };
-        
-        let updated: { primaryShift: Shift | null, overlays: Shift[] };
-        if (isOverlay) {
-          const idx = cur.overlays.findIndex((o: Shift) => o.id === shift.id);
-          const overlays = idx > -1 ? cur.overlays.filter((o: Shift) => o.id !== shift.id) : [...cur.overlays, shift];
-          updated = { ...cur, overlays };
-        } else {
-          updated = { ...cur, primaryShift: shift };
-        }
-        
-        finalData = updated;
-        empDayData.set(selectedDate, updated);
+        empDayData.set(selectedDate, finalData);
         newSchedule.set(selectedEmployeeId, empDayData);
         return newSchedule;
       });
-      if (finalData) {
-        const data = finalData as { primaryShift: Shift | null, overlays: Shift[] };
-        await trySave(() => firebaseService.saveSchedule(selectedEmployeeId, selectedDate, 'cuisinier', data.primaryShift, data.overlays));
-      }
+      await trySave(() => firebaseService.saveSchedule(selectedEmployeeId, selectedDate, 'cuisinier', finalData.primaryShift, finalData.overlays));
     }
   };
 
