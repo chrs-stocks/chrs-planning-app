@@ -1,5 +1,5 @@
 import {
-  collection, doc, getDocs, getDoc, setDoc, updateDoc, deleteDoc, addDoc, query, where,
+  collection, doc, getDocs, getDoc, setDoc, updateDoc, deleteDoc, addDoc, query, where, onSnapshot,
 } from 'firebase/firestore';
 import { db } from './firebaseClient';
 import type { Employee } from './data/employeeTypes';
@@ -67,6 +67,19 @@ export const firebaseService = {
     const q = query(collection(db, 'schedules'), where('schedule_type', '==', type));
     const snapshot = await getDocs(q);
     return snapshot.docs.map(d => d.data() as FirebaseSchedule);
+  },
+
+  // Écoute temps réel plutôt qu'une lecture ponctuelle : un onSnapshot inclut immédiatement
+  // les écritures locales encore en vol (latency compensation Firestore), ce qui évite qu'un
+  // remontage de composant juste après une saisie ne relise une version pas encore confirmée
+  // côté serveur et n'écrase la modification à l'écran.
+  subscribeToSchedules(type: string, onData: (schedules: FirebaseSchedule[]) => void): () => void {
+    const q = query(collection(db, 'schedules'), where('schedule_type', '==', type));
+    return onSnapshot(
+      q,
+      snapshot => onData(snapshot.docs.map(d => d.data() as FirebaseSchedule)),
+      error => console.error(`Erreur de synchronisation du planning (${type}) :`, error)
+    );
   },
 
   async saveSchedule(employeeId: string, date: string, type: string, primaryShift: Shift | null, overlays: Shift[]) {

@@ -102,6 +102,8 @@ export const useScheduleData = () => {
     }
   };
 
+  // Conservé pour compatibilité : force un aller-retour Firestore ponctuel (les composants
+  // s'appuient normalement sur les écouteurs temps réel mis en place ci-dessous).
   const syncWithFirebase = async () => {
     setLoading(true);
     try {
@@ -112,10 +114,10 @@ export const useScheduleData = () => {
         firebaseService.getSchedules('astreinte')
       ]);
 
-      if (gen && gen.length > 0) setGeneralSchedule(mapFirebaseToSchedule(gen));
-      if (cuis && cuis.length > 0) setCuisinierSchedule(mapFirebaseToSchedule(cuis));
-      if (veil && veil.length > 0) setVeilleurSchedule(mapFirebaseToSchedule(veil));
-      if (astr && astr.length > 0) setAstreinteSchedule(mapFirebaseToSchedule(astr));
+      setGeneralSchedule(mapFirebaseToSchedule(gen));
+      setCuisinierSchedule(mapFirebaseToSchedule(cuis));
+      setVeilleurSchedule(mapFirebaseToSchedule(veil));
+      setAstreinteSchedule(mapFirebaseToSchedule(astr));
     } catch (error) {
       console.error("Failed to sync with Firebase", error);
     } finally {
@@ -126,12 +128,52 @@ export const useScheduleData = () => {
   useEffect(() => {
     loadLocalData();
 
+    let unsubscribeSchedules: Array<() => void> = [];
+    const teardownSchedules = () => {
+      unsubscribeSchedules.forEach(unsub => unsub());
+      unsubscribeSchedules = [];
+    };
+
     // Attendre que Firebase Auth ait fini de restaurer la session persistée avant de lire
     // Firestore : sinon la requête part avant que l'utilisateur soit authentifié, échoue en
     // silence (permission-denied), et l'app reste bloquée sur les données locales potentiellement
     // obsolètes jusqu'au prochain rechargement.
-    const unsubscribeAuth = onAuthStateChanged(auth, () => {
-      syncWithFirebase();
+    //
+    // On utilise des écouteurs temps réel (onSnapshot) plutôt qu'une lecture ponctuelle
+    // (getDocs) : un remontage de composant (ex. changement de vue juste après une saisie)
+    // relançait une lecture ponctuelle qui pouvait arriver avant que l'écriture précédente ne
+    // soit confirmée côté serveur, et écrasait la modification à l'écran avec l'ancienne
+    // valeur. Les écouteurs temps réel incluent immédiatement les écritures locales encore en
+    // vol, ce qui élimine cette course.
+    const unsubscribeAuth = onAuthStateChanged(auth, firebaseUser => {
+      teardownSchedules();
+      if (!firebaseUser) return;
+
+      setLoading(true);
+      let pending = 4;
+      const onOneLoaded = () => {
+        pending -= 1;
+        if (pending <= 0) setLoading(false);
+      };
+
+      unsubscribeSchedules = [
+        firebaseService.subscribeToSchedules('general', rows => {
+          setGeneralSchedule(mapFirebaseToSchedule(rows));
+          onOneLoaded();
+        }),
+        firebaseService.subscribeToSchedules('cuisinier', rows => {
+          setCuisinierSchedule(mapFirebaseToSchedule(rows));
+          onOneLoaded();
+        }),
+        firebaseService.subscribeToSchedules('veilleur', rows => {
+          setVeilleurSchedule(mapFirebaseToSchedule(rows));
+          onOneLoaded();
+        }),
+        firebaseService.subscribeToSchedules('astreinte', rows => {
+          setAstreinteSchedule(mapFirebaseToSchedule(rows));
+          onOneLoaded();
+        }),
+      ];
     });
 
     const handleScheduleChange = () => {
@@ -142,6 +184,7 @@ export const useScheduleData = () => {
 
     return () => {
       unsubscribeAuth();
+      teardownSchedules();
       window.removeEventListener('scheduleChanged', handleScheduleChange);
     };
   }, []);
