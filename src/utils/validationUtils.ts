@@ -65,9 +65,10 @@ export const validateSchedules = (
   generalSchedule: GeneralSchedule,
   cuisinierSchedule: CuisinierVeilleurSchedule,
   veilleurSchedule: CuisinierVeilleurSchedule,
+  astreinteSchedule: CuisinierVeilleurSchedule,
   startDate: Date,
   endDate: Date,
-  context: 'general' | 'veilleurs' | 'cuisiniers' | 'all' = 'all'
+  context: 'general' | 'veilleurs' | 'cuisiniers' | 'astreintes' | 'all' = 'all'
 ): ValidationNote[] => {
   const notes: ValidationNote[] = [];
   const daysInPeriod = eachDayOfInterval({ start: startDate, end: endDate });
@@ -252,6 +253,42 @@ export const validateSchedules = (
         notes.push({
           date: ds,
           message: `${disp} : pas de cuisinier détecté le midi.`,
+          severity: 'warning',
+        });
+      }
+    });
+  }
+
+  // ── Validation astreintes ────────────────────────────────────────────────────
+  if (context === 'astreintes' || context === 'all') {
+    daysInPeriod.forEach(day => {
+      const ds = format(day, 'yyyy-MM-dd');
+      const disp = format(day, 'dd/MM/yyyy');
+      let hasJour = false;
+      let hasSoir = false;
+      employees.filter(e => (e.plannings ?? []).includes('astreinte')).forEach(emp => {
+        const d = getData(astreinteSchedule, emp.id, ds);
+        if (d?.primaryShift && !isAbsent(d)) {
+          if (['astreinte-jour', 'astreinte-total'].includes(d.primaryShift.id)) hasJour = true;
+          if (['astreinte-soir', 'astreinte-total'].includes(d.primaryShift.id)) hasSoir = true;
+        }
+      });
+      if (!hasJour && !hasSoir) {
+        notes.push({
+          date: ds,
+          message: `${disp} : aucune personne d'astreinte.`,
+          severity: 'error',
+        });
+      } else if (!hasJour) {
+        notes.push({
+          date: ds,
+          message: `${disp} : astreinte non couverte en journée.`,
+          severity: 'warning',
+        });
+      } else if (!hasSoir) {
+        notes.push({
+          date: ds,
+          message: `${disp} : astreinte non couverte en soirée.`,
           severity: 'warning',
         });
       }

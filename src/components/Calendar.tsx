@@ -18,7 +18,7 @@ import type { ValidationNote } from '../utils/validationUtils';
 const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: string }> = ({ schoolHolidays, filterEmployeeName }) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [schedule, setSchedule] = useState<Map<string, Map<string, { primaryShift: Shift | null, overlays: Shift[] }>>>(new Map());
-  const { generalSchedule, cuisinierSchedule, veilleurSchedule } = useScheduleData();
+  const { generalSchedule, cuisinierSchedule, veilleurSchedule, astreinteSchedule } = useScheduleData();
   const { isAdmin } = useAuth();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
@@ -67,6 +67,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
       schedule,
       cuisinierSchedule,
       veilleurSchedule,
+      astreinteSchedule,
       startOfMonth(currentDate),
       endOfMonth(currentDate),
       'all'

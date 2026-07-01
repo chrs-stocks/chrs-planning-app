@@ -15,12 +15,12 @@ interface ValidationNote {
 
 interface NotesProps {
   currentDate: Date;
-  context: 'general' | 'veilleurs' | 'cuisiniers' | 'all';
+  context: 'general' | 'veilleurs' | 'cuisiniers' | 'astreintes' | 'all';
 }
 
 const Notes: React.FC<NotesProps> = ({ currentDate, context }) => {
   const [notes, setNotes] = useState<ValidationNote[]>([]);
-  const { generalSchedule, cuisinierSchedule, veilleurSchedule } = useScheduleData();
+  const { generalSchedule, cuisinierSchedule, veilleurSchedule, astreinteSchedule } = useScheduleData();
 
   useEffect(() => {
     const employees = loadEmployees();
@@ -32,12 +32,13 @@ const Notes: React.FC<NotesProps> = ({ currentDate, context }) => {
       generalSchedule,
       cuisinierSchedule,
       veilleurSchedule,
+      astreinteSchedule,
       start,
       end,
       context
     );
     setNotes(validationNotes);
-  }, [currentDate, context, generalSchedule, cuisinierSchedule, veilleurSchedule]); // Reruns when data changes
+  }, [currentDate, context, generalSchedule, cuisinierSchedule, veilleurSchedule, astreinteSchedule]); // Reruns when data changes
 
   return (
     <div className="p-4 mt-6 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 rounded-lg shadow-md no-print">

@@ -44,6 +44,7 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
   onSelectCustomShift,
   onApplyToWeek,
   onApplyOverlayToWeek,
+  employeeId,
   date,
   x,
   y,
@@ -163,6 +164,20 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
         {/* ── STEP: select ─────────────────────────────────────── */}
         {step === 'select' && (
           <>
+            {/* Initiales intérimaire (ligne "Intérim" du planning Veilleurs) */}
+            {employeeId === 'veilleur-interim' && (
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Initiales de l'intérimaire :</label>
+                <input
+                  type="text"
+                  placeholder="ex: JD"
+                  className="w-full p-2 border rounded text-sm"
+                  value={assignedPersonInitials}
+                  onChange={e => setAssignedPersonInitials(e.target.value)}
+                />
+              </div>
+            )}
+
             {/* Custom actions */}
             {actions.length > 0 && (
               <div className="grid grid-cols-2 gap-2">

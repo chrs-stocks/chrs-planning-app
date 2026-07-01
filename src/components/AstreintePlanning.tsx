@@ -6,6 +6,7 @@ import type { Shift } from '../data/shifts';
 import { getContrastingTextColor } from '../utils/colorUtils';
 import { ShiftSelectionModal } from './ShiftSelectionModal';
 import { SHIFT_OPTIONS, ABSENCE_OVERLAY_IDS } from '../data/shifts';
+import Notes from './Notes';
 import { loadEmployees } from '../data/employeeData';
 import { useScheduleData } from '../hooks/useScheduleData';
 import { firebaseService } from '../firebaseService';
@@ -218,6 +219,7 @@ const AstreintePlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
       {isModalOpen && selectedEmployeeId && selectedDate && (
         <ShiftSelectionModal isOpen={isModalOpen} onClose={handleCloseModal} onSelectShift={handleSelectShift} onClearShift={handleClearShift} onSelectCustomShift={handleSelectCustomShift} employeeId={selectedEmployeeId} date={selectedDate} x={modalX} y={modalY} customShiftOptions={SHIFT_OPTIONS.filter(s => s.type.startsWith('astreinte') || s.isOverlay)} currentPrimaryShift={schedule.get(selectedEmployeeId)?.get(selectedDate)?.primaryShift} currentOverlays={schedule.get(selectedEmployeeId)?.get(selectedDate)?.overlays} />
       )}
+      <Notes currentDate={currentDate} context="astreintes" />
       {saveStatus !== 'idle' && (
         <div className={`fixed bottom-4 right-4 px-4 py-2 rounded-lg shadow-lg text-sm font-semibold z-50 ${
           saveStatus === 'saving' ? 'bg-gray-100 text-gray-700 border border-gray-300' :
