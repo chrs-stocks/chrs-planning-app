@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
+import { onAuthStateChanged } from 'firebase/auth';
 import type { Shift } from '../data/shifts';
 import { getShiftById } from '../data/shifts';
 import { firebaseService } from '../firebaseService';
 import type { FirebaseSchedule } from '../firebaseService';
+import { auth } from '../firebaseClient';
 
 // Define types for the schedule data
 type GeneralSchedule = Map<string, Map<string, { primaryShift: Shift | null, overlays: Shift[] }>>;
@@ -123,7 +125,14 @@ export const useScheduleData = () => {
 
   useEffect(() => {
     loadLocalData();
-    syncWithFirebase();
+
+    // Attendre que Firebase Auth ait fini de restaurer la session persistée avant de lire
+    // Firestore : sinon la requête part avant que l'utilisateur soit authentifié, échoue en
+    // silence (permission-denied), et l'app reste bloquée sur les données locales potentiellement
+    // obsolètes jusqu'au prochain rechargement.
+    const unsubscribeAuth = onAuthStateChanged(auth, () => {
+      syncWithFirebase();
+    });
 
     const handleScheduleChange = () => {
       loadLocalData();
@@ -132,6 +141,7 @@ export const useScheduleData = () => {
     window.addEventListener('scheduleChanged', handleScheduleChange);
 
     return () => {
+      unsubscribeAuth();
       window.removeEventListener('scheduleChanged', handleScheduleChange);
     };
   }, []);
