@@ -11,15 +11,18 @@ export const useAuth = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (isSignInWithEmailLink(auth, window.location.href)) {
+    const signInHref = window.location.href;
+    if (isSignInWithEmailLink(auth, signInHref)) {
+      // Nettoyer l'URL tout de suite : sinon, un code déjà utilisé/expiré relance
+      // une tentative de connexion (et son erreur) à chaque remontage du composant.
+      window.history.replaceState({}, document.title, window.location.pathname);
       const email =
         window.localStorage.getItem('emailForSignIn') ||
         window.prompt('Confirmez votre adresse email pour finaliser la connexion :');
       if (email) {
-        signInWithEmailLink(auth, email, window.location.href)
+        signInWithEmailLink(auth, email, signInHref)
           .then(async result => {
             window.localStorage.removeItem('emailForSignIn');
-            window.history.replaceState({}, document.title, window.location.pathname);
             const profile = await firebaseService.getUserByEmail(result.user.email!);
             if (!profile) {
               await signOut(auth);
