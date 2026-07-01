@@ -8,8 +8,9 @@
     margin: 8mm;
   }
 
-  /* Cache tout ce qui n'est pas le planning */
-  .no-print, nav, .notes-section {
+  /* Cache tout ce qui n'est pas le planning (dont les notes/avertissements,
+     sans utilité une fois imprimés) */
+  .no-print, nav {
     display: none !important;
   }
 

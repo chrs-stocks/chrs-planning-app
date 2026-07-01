@@ -40,7 +40,7 @@ const Notes: React.FC<NotesProps> = ({ currentDate, context }) => {
   }, [currentDate, context, generalSchedule, cuisinierSchedule, veilleurSchedule]); // Reruns when data changes
 
   return (
-    <div className="p-4 mt-6 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 rounded-lg shadow-md">
+    <div className="p-4 mt-6 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 rounded-lg shadow-md no-print">
       <h3 className="text-xl font-bold mb-2">Notes & Avertissements</h3>
       {notes.length > 0 ? (
         <ul className="list-disc list-inside">
