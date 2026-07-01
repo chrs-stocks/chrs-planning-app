@@ -22,7 +22,7 @@ type View = AdminView | EmployeeView;
 function App() {
   const [currentView, setCurrentView] = useState<View>('general');
   const [schoolHolidays, setSchoolHolidays] = useState<Set<string>>(new Set());
-  const { user, isAdmin, loading, profileName } = useAuth();
+  const { user, isAdmin, loading, profileName, pendingEmailLink, signingIn, linkSignInError, confirmEmailLinkSignIn } = useAuth();
   const [exporting, setExporting] = useState(false);
 
   const handleExportData = async () => {
@@ -85,7 +85,7 @@ function App() {
     }
   }, [loading, isAdmin, currentView]);
 
-  if (loading) {
+  if (loading && !pendingEmailLink) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
@@ -102,7 +102,12 @@ function App() {
         <div className="bg-msm-navy text-white p-4 text-center">
           <h1 className="text-xl font-bold">Planning CHRS Maison Saint-Martin</h1>
         </div>
-        <Login />
+        <Login
+          pendingEmailLink={pendingEmailLink}
+          signingIn={signingIn}
+          linkSignInError={linkSignInError}
+          confirmEmailLinkSignIn={confirmEmailLinkSignIn}
+        />
       </div>
     );
   }

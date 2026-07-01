@@ -8,12 +8,23 @@ const actionCodeSettings = {
   handleCodeInApp: true,
 };
 
-const Login: React.FC = () => {
+interface LoginProps {
+  // Le lien magique est détecté par l'instance de useAuth montée le plus tôt (voir App),
+  // qui nettoie l'URL avant que ce composant ne remonte : on reçoit donc cet état en props
+  // plutôt que de relire notre propre instance de useAuth, qui ne le verrait jamais.
+  pendingEmailLink?: { href: string; email: string | null } | null;
+  signingIn?: boolean;
+  linkSignInError?: string | null;
+  confirmEmailLinkSignIn?: (email?: string) => void;
+}
+
+const Login: React.FC<LoginProps> = ({ pendingEmailLink, signingIn, linkSignInError, confirmEmailLinkSignIn }) => {
   const { user, profileName, isAdmin } = useAuth();
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmEmail, setConfirmEmail] = useState(pendingEmailLink?.email || '');
 
   const handleSendLink = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,6 +43,42 @@ const Login: React.FC = () => {
   const handleLogout = async () => {
     await signOut(auth);
   };
+
+  if (pendingEmailLink && !user) {
+    return (
+      <div className="max-w-md mx-auto mt-10 p-8 bg-white rounded-lg shadow-md border border-gray-200 text-center">
+        <h2 className="text-xl font-bold text-msm-navy mb-3">Finaliser la connexion</h2>
+        <p className="text-gray-500 text-sm mb-6">
+          Confirmez votre adresse email pour terminer la connexion avec le lien reçu par email.
+        </p>
+
+        {!pendingEmailLink.email && (
+          <input
+            type="email"
+            value={confirmEmail}
+            onChange={e => setConfirmEmail(e.target.value)}
+            placeholder="prenom@maison-saint-martin.fr"
+            className="w-full p-3 mb-4 border rounded-lg focus:outline-none focus:ring-2 focus:ring-msm-sky"
+            autoFocus
+          />
+        )}
+
+        {linkSignInError && (
+          <div className="p-3 mb-4 bg-red-50 border border-red-200 rounded text-sm text-red-700 text-left">
+            {linkSignInError}
+          </div>
+        )}
+
+        <button
+          onClick={() => confirmEmailLinkSignIn?.(confirmEmail)}
+          disabled={signingIn || (!pendingEmailLink.email && !confirmEmail.trim())}
+          className={`w-full py-3 rounded-lg font-bold text-white transition-all ${signingIn ? 'bg-gray-400' : 'bg-msm-navy hover:bg-msm-navy-dark'}`}
+        >
+          {signingIn ? 'Connexion en cours...' : 'Confirmer la connexion'}
+        </button>
+      </div>
+    );
+  }
 
   if (user) {
     return (
