@@ -5,7 +5,7 @@
 @media print {
   @page {
     size: landscape;
-    margin: 5mm;
+    margin: 8mm;
   }
 
   /* Cache tout ce qui n'est pas le planning */
@@ -16,24 +16,34 @@
   .print-only-header {
     display: block;
     text-align: center;
-    margin-bottom: 10px;
+    margin-bottom: 6px;
+    flex-shrink: 0;
   }
 
   .print-title {
-    font-size: 18px;
+    font-size: 16px;
     font-weight: bold;
   }
 
-  /* Force le planning à tenir sur une seule page */
+  .print-subtitle {
+    font-size: 11px;
+  }
+
+  /* Le planning tient sur une seule page et est centré verticalement :
+     utile quand le tableau (ex: Astreintes, Cuisiniers) est plus court
+     que la page — évite qu'il reste collé en haut avec un grand vide
+     en dessous. Comme aucune taille de papier n'est imposée ici, le
+     rendu s'adapte aussi bien à une feuille A4 qu'A3 (dimensionné pour
+     tenir en A4, la plus contraignante ; A3 étant plus grande, le
+     contenu y tient toujours, simplement mieux centré/aéré). */
   .printable-area {
     width: 100% !important;
     max-width: 100% !important;
     height: 98vh !important;
     display: flex !important;
     flex-direction: column !important;
-    justify-content: flex-start !important;
+    justify-content: center !important;
     page-break-inside: avoid !important;
-    transform: scale(1); /* On laisse le navigateur gérer l'ajustement */
   }
 
   .overflow-x-auto {
@@ -46,16 +56,24 @@
     table-layout: fixed !important;
   }
 
+  /* Hauteur de ligne fixe et identique pour toutes les cellules d'un
+     même planning (dimensionnée pour absorber 2 lignes de texte —
+     horaire + information superposée — sans que certaines lignes du
+     tableau paraissent plus hautes que d'autres) */
   th, td {
     border: 1px solid #333 !important;
     font-size: 8pt !important;
-    padding: 1px !important;
-    height: auto !important;
+    line-height: 1.1 !important;
+    padding: 1px 2px !important;
+    height: 19pt !important;
+    overflow: hidden !important;
   }
 
-  /* Pour les plannings avec beaucoup d'employés, on réduit encore un peu */
+  /* Planning Général : jusqu'à 31 lignes (1 par jour du mois) →
+     cellules plus compactes pour tenir sur une seule page A4 */
   .calendar-view table th, .calendar-view table td {
-    font-size: 7pt !important;
+    font-size: 6.5pt !important;
+    height: 15pt !important;
   }
 
   * {
