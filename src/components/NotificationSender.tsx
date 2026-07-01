@@ -1,12 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import emailjs from '@emailjs/browser';
 import { firebaseService } from '../firebaseService';
 import type { UserProfile } from '../firebaseService';
+import { loadEmployees } from '../data/employeeData';
+import { PLANNING_LABELS } from '../data/employeeTypes';
+import type { PlanningKey } from '../data/employeeTypes';
 
 const SERVICE_ID  = import.meta.env.VITE_EMAILJS_SERVICE_ID;
 const TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
 const PUBLIC_KEY  = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
 const APP_URL     = window.location.origin;
+const TEAM_KEYS: PlanningKey[] = ['general', 'astreinte', 'cuisinier', 'veilleur'];
 
 const NotificationSender: React.FC = () => {
   const [recipients, setRecipients]       = useState<UserProfile[]>([]);
@@ -16,6 +20,27 @@ const NotificationSender: React.FC = () => {
   const [sending, setSending]             = useState(false);
   const [results, setResults]             = useState<{ name: string; ok: boolean }[]>([]);
   const [loadingRecipients, setLoadingRecipients] = useState(true);
+
+  // Les comptes de connexion (collection "users") ne portent pas l'équipe : on la déduit
+  // en rapprochant leur nom de celui d'un employé du planning (même convention que la vue
+  // "mon planning", qui filtre déjà les employés par nom).
+  const planningsByName = useMemo(() => {
+    const map = new Map<string, PlanningKey[]>();
+    loadEmployees().forEach(emp => map.set(emp.name.trim().toLowerCase(), emp.plannings ?? []));
+    return map;
+  }, []);
+
+  const teamsOf = (recipient: UserProfile): PlanningKey[] =>
+    planningsByName.get(recipient.name.trim().toLowerCase()) ?? [];
+
+  const teamMembers = useMemo(() => {
+    const map = new Map<PlanningKey, string[]>();
+    TEAM_KEYS.forEach(team => {
+      map.set(team, recipients.filter(r => teamsOf(r).includes(team)).map(r => r.id));
+    });
+    return map;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recipients, planningsByName]);
 
   useEffect(() => {
     emailjs.init(PUBLIC_KEY);
@@ -43,6 +68,16 @@ const NotificationSender: React.FC = () => {
 
   const selectAll   = () => setSelected(new Set(recipients.map(r => r.id)));
   const deselectAll = () => setSelected(new Set());
+
+  // Ajoute/retire toute une équipe à la sélection en cours, sans toucher au reste
+  // (permet par ex. de combiner "Cuisiniers" + "Direction").
+  const toggleTeam = (team: PlanningKey) => {
+    const members = teamMembers.get(team) ?? [];
+    const allSelected = members.length > 0 && members.every(id => selected.has(id));
+    const next = new Set(selected);
+    members.forEach(id => allSelected ? next.delete(id) : next.add(id));
+    setSelected(next);
+  };
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,6 +136,31 @@ const NotificationSender: React.FC = () => {
                 <button type="button" onClick={deselectAll} className="text-gray-500 hover:underline">Aucun</button>
               </div>
             </div>
+
+            <div className="flex flex-wrap gap-2 mb-2">
+              {TEAM_KEYS.map(team => {
+                const members = teamMembers.get(team) ?? [];
+                const allSelected = members.length > 0 && members.every(id => selected.has(id));
+                return (
+                  <button
+                    key={team}
+                    type="button"
+                    disabled={members.length === 0}
+                    onClick={() => toggleTeam(team)}
+                    className={`text-xs px-3 py-1 rounded-full font-semibold border transition-all ${
+                      members.length === 0
+                        ? 'border-gray-200 text-gray-300 cursor-not-allowed'
+                        : allSelected
+                          ? 'bg-msm-navy text-white border-msm-navy'
+                          : 'border-msm-navy text-msm-navy hover:bg-msm-navy-light'
+                    }`}
+                  >
+                    {PLANNING_LABELS[team]} ({members.length})
+                  </button>
+                );
+              })}
+            </div>
+
             <div className="border rounded-lg divide-y">
               {recipients.map(r => (
                 <label key={r.id} className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 cursor-pointer">
@@ -112,6 +172,11 @@ const NotificationSender: React.FC = () => {
                   />
                   <span className="flex-1 font-medium">{r.name}</span>
                   <span className="text-xs text-gray-400">{r.email}</span>
+                  {teamsOf(r).map(team => (
+                    <span key={team} className="text-xs px-2 py-0.5 rounded-full font-semibold bg-gray-100 text-gray-600">
+                      {PLANNING_LABELS[team]}
+                    </span>
+                  ))}
                   <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${r.role === 'admin' ? 'bg-red-100 text-msm-red' : 'bg-msm-navy-light text-msm-navy'}`}>
                     {r.role === 'admin' ? 'Direction' : 'Employé'}
                   </span>
