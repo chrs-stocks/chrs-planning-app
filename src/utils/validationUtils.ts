@@ -73,9 +73,7 @@ export const validateSchedules = (
   const daysInPeriod = eachDayOfInterval({ start: startDate, end: endDate });
 
   // Pour les checks de couverture collective (règles 1 & 2) : tout le monde compte
-  const generalAll = employees.filter(
-    e => e.type === 'general' || e.type === 'reinforcement' || e.type === 'interim'
-  );
+  const generalAll = employees.filter(e => (e.plannings ?? []).includes('general'));
   // Pour les checks individuels (règles 3, 4, 5) : uniquement les salariés permanents
   const generalOnly = employees.filter(e => e.type === 'general');
 
@@ -224,7 +222,7 @@ export const validateSchedules = (
       const ds = format(day, 'yyyy-MM-dd');
       const disp = format(day, 'dd/MM/yyyy');
       let hasNightWatch = false;
-      employees.filter(e => e.type === 'veilleur').forEach(emp => {
+      employees.filter(e => (e.plannings ?? []).includes('veilleur')).forEach(emp => {
         const d = veilleurSchedule.get(emp.id)?.get(ds);
         if (d?.primaryShift?.id === 'veilleur-night' && !isAbsent(d)) hasNightWatch = true;
       });
@@ -244,7 +242,7 @@ export const validateSchedules = (
       const ds = format(day, 'yyyy-MM-dd');
       const disp = format(day, 'dd/MM/yyyy');
       let hasKitchenMidi = false;
-      employees.filter(e => e.type === 'cuisinier').forEach(emp => {
+      employees.filter(e => (e.plannings ?? []).includes('cuisinier')).forEach(emp => {
         const d = cuisinierSchedule.get(emp.id)?.get(ds);
         if (d?.primaryShift && !isAbsent(d) && ['cuisinier-7h', 'cuisinier-midi'].includes(d.primaryShift.id)) {
           hasKitchenMidi = true;

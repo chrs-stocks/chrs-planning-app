@@ -13,7 +13,7 @@ import Login from './components/Login';
 import { getFrenchSchoolHolidays } from './utils/dateUtils';
 import { loadEmployees } from './data/employeeData';
 import { useAuth } from './hooks/useAuth';
-import { supabaseService } from './supabaseService';
+import { firebaseService } from './firebaseService';
 
 type AdminView = 'general' | 'veilleurs' | 'cuisiniers' | 'astreintes' | 'employees' | 'statistics' | 'requests' | 'admin-requests' | 'user-management' | 'notify' | 'login';
 type EmployeeView = 'general' | 'my-planning' | 'requests' | 'login';
@@ -29,11 +29,11 @@ function App() {
     setExporting(true);
     try {
       const [employees, general, veilleur, cuisinier, astreinte] = await Promise.all([
-        supabaseService.getEmployees(),
-        supabaseService.getSchedules('general'),
-        supabaseService.getSchedules('veilleur'),
-        supabaseService.getSchedules('cuisinier'),
-        supabaseService.getSchedules('astreinte'),
+        firebaseService.getEmployees(),
+        firebaseService.getSchedules('general'),
+        firebaseService.getSchedules('veilleur'),
+        firebaseService.getSchedules('cuisinier'),
+        firebaseService.getSchedules('astreinte'),
       ]);
       const payload = {
         exportedAt: new Date().toISOString(),
@@ -52,7 +52,7 @@ function App() {
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Export failed:', err);
-      alert('Erreur lors de l\'export. Vérifiez votre connexion Supabase.');
+      alert('Erreur lors de l\'export. Vérifiez votre connexion.');
     } finally {
       setExporting(false);
     }
@@ -171,6 +171,12 @@ function App() {
                 className={`px-3 py-2 rounded ${currentView === 'cuisiniers' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
               >
                 Planning Cuisiniers
+              </button>
+              <button
+                onClick={() => setCurrentView('astreintes')}
+                className={`px-3 py-2 rounded ${currentView === 'astreintes' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
+              >
+                Planning Astreintes
               </button>
               <button
                 onClick={() => setCurrentView('employees')}

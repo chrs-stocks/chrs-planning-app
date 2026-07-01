@@ -10,7 +10,7 @@ import { SHIFT_OPTIONS, ABSENCE_OVERLAY_IDS } from '../data/shifts';
 import { ShiftSelectionModal } from './ShiftSelectionModal';
 import Notes from './Notes';
 import { useScheduleData } from '../hooks/useScheduleData';
-import { supabaseService } from '../supabaseService';
+import { firebaseService } from '../firebaseService';
 import { useAuth } from '../hooks/useAuth';
 import { validateSchedules } from '../utils/validationUtils';
 import type { ValidationNote } from '../utils/validationUtils';
@@ -97,13 +97,13 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
     clearTimeout(saveTimerRef.current);
     try {
       const timeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Timeout Supabase (10s)')), 10000)
+        setTimeout(() => reject(new Error('Timeout Firebase (10s)')), 10000)
       );
       await Promise.race([fn(), timeout]);
       setSaveStatus('saved');
       saveTimerRef.current = setTimeout(() => setSaveStatus('idle'), 2500);
     } catch (err) {
-      console.error('Échec sauvegarde Supabase:', err);
+      console.error('Échec sauvegarde Firebase:', err);
       setSaveStatus('error');
     }
   };
@@ -126,7 +126,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
     });
     await trySave(() => Promise.all(
       updates.map(({ date: ds, primaryShift }) =>
-        supabaseService.saveSchedule(empId, ds, 'general', primaryShift, existingOverlays.get(ds) ?? [])
+        firebaseService.saveSchedule(empId, ds, 'general', primaryShift, existingOverlays.get(ds) ?? [])
       )
     ).then(() => undefined));
   };
@@ -172,7 +172,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
     });
     await trySave(() => Promise.all(
       saves.map(({ ds, primary, overlays }) =>
-        supabaseService.saveSchedule(selectedEmployeeId, ds, 'general', primary, overlays)
+        firebaseService.saveSchedule(selectedEmployeeId, ds, 'general', primary, overlays)
       )
     ).then(() => undefined));
   };
@@ -254,7 +254,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
     });
     if (updatedDayData) {
       const data = updatedDayData as { primaryShift: Shift | null, overlays: Shift[] };
-      await trySave(() => supabaseService.saveSchedule(selectedEmployeeId, selectedDate, 'general', data.primaryShift, data.overlays));
+      await trySave(() => firebaseService.saveSchedule(selectedEmployeeId, selectedDate, 'general', data.primaryShift, data.overlays));
     }
   };
 
@@ -266,7 +266,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
         if (empMap) { empMap.delete(selectedDate); if (empMap.size === 0) newSchedule.delete(selectedEmployeeId); }
         return newSchedule;
       });
-      await trySave(() => supabaseService.deleteSchedule(selectedEmployeeId, selectedDate, 'general'));
+      await trySave(() => firebaseService.deleteSchedule(selectedEmployeeId, selectedDate, 'general'));
     }
   };
 
@@ -300,7 +300,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
     : format(currentDate, 'MMMM yyyy', { locale: fr });
 
   const filteredEmployees = allEmployees.filter(emp => {
-    return (emp.type === 'general' || emp.type === 'reinforcement' || emp.type === 'interim' || emp.type === 'intern') && visibleEmployeeIds.has(emp.id);
+    return (emp.plannings ?? []).includes('general') && visibleEmployeeIds.has(emp.id);
   }).sort((a, b) => (a.order || 0) - (b.order || 0));
 
   // Shifts pertinents pour le planning général (hors veilleur/cuisinier/astreinte)
@@ -389,7 +389,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
           <span className="font-semibold text-msm-navy">Filtrer Colonnes :</span>
           <div className="flex flex-wrap gap-2">
             {allEmployees
-              .filter(e => ['general', 'reinforcement', 'interim', 'intern'].includes(e.type))
+              .filter(e => (e.plannings ?? []).includes('general'))
               .sort((a, b) => (a.order || 0) - (b.order || 0))
               .map(emp => (
               <label key={emp.id} className="flex items-center space-x-1 bg-white px-2 py-1 rounded border text-sm cursor-pointer hover:bg-msm-navy-light">
@@ -497,7 +497,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
         }`}>
           {saveStatus === 'saving' && '⏳ Sauvegarde…'}
           {saveStatus === 'saved'  && '✅ Sauvegardé'}
-          {saveStatus === 'error'  && '⚠️ Supabase inaccessible — données conservées localement'}
+          {saveStatus === 'error'  && '⚠️ Firebase inaccessible — données conservées localement'}
         </div>
       )}
     </div>

@@ -1,19 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { loadEmployees, saveEmployees, syncEmployeesWithSupabase } from '../data/employeeData';
-import { supabaseService } from '../supabaseService';
-import type { Employee } from '../data/employeeTypes';
+import { loadEmployees, saveEmployees, syncEmployeesWithFirebase, DEFAULT_PLANNINGS_BY_TYPE } from '../data/employeeData';
+import { firebaseService } from '../firebaseService';
+import type { Employee, PlanningKey } from '../data/employeeTypes';
+import { PLANNING_LABELS } from '../data/employeeTypes';
+
+const ALL_PLANNINGS: PlanningKey[] = ['general', 'veilleur', 'cuisinier', 'astreinte'];
 
 const EmployeeManagement: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [newEmployee, setNewEmployee] = useState<Omit<Employee, 'id'>>({
-    name: '', type: 'general', color: '#CCCCCC', workingHoursPercentage: 100, order: 0
+    name: '', type: 'general', color: '#CCCCCC', workingHoursPercentage: 100, order: 0, plannings: ['general']
   });
   const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
 
   useEffect(() => {
     const init = async () => {
       loadEmployees();
-      const synced = await syncEmployeesWithSupabase();
+      const synced = await syncEmployeesWithFirebase();
       setEmployees(synced.sort((a, b) => (a.order || 0) - (b.order || 0)));
     };
     init();
@@ -21,10 +24,24 @@ const EmployeeManagement: React.FC = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setNewEmployee(prev => ({
-      ...prev,
-      [name]: name === 'workingHoursPercentage' ? parseFloat(value) : value
-    }));
+    setNewEmployee(prev => {
+      const updated = { ...prev, [name]: name === 'workingHoursPercentage' ? parseFloat(value) : value };
+      // Pré-cocher le planning par défaut du type, uniquement à la création (pas en édition)
+      if (name === 'type' && !editingEmployeeId) {
+        updated.plannings = DEFAULT_PLANNINGS_BY_TYPE[value as Employee['type']] ?? ['general'];
+      }
+      return updated;
+    });
+  };
+
+  const togglePlanning = (planning: PlanningKey) => {
+    setNewEmployee(prev => {
+      const current = prev.plannings ?? [];
+      const plannings = current.includes(planning)
+        ? current.filter(p => p !== planning)
+        : [...current, planning];
+      return { ...prev, plannings };
+    });
   };
 
   const reindex = (list: Employee[]): Employee[] =>
@@ -58,13 +75,13 @@ const EmployeeManagement: React.FC = () => {
     const updated = reindex([...employees, employeeToAdd]);
     setEmployees(updated);
     await saveEmployees(updated);
-    setNewEmployee({ name: '', type: 'general', color: '#CCCCCC', workingHoursPercentage: 100, order: 0 });
+    setNewEmployee({ name: '', type: 'general', color: '#CCCCCC', workingHoursPercentage: 100, order: 0, plannings: ['general'] });
   };
 
   const handleEditEmployee = (id: string) => {
     const emp = employees.find(e => e.id === id);
     if (emp) {
-      setNewEmployee({ ...emp });
+      setNewEmployee({ ...emp, plannings: emp.plannings ?? DEFAULT_PLANNINGS_BY_TYPE[emp.type] ?? [] });
       setEditingEmployeeId(id);
     }
   };
@@ -76,7 +93,7 @@ const EmployeeManagement: React.FC = () => {
     );
     setEmployees(updated);
     await saveEmployees(updated);
-    setNewEmployee({ name: '', type: 'general', color: '#CCCCCC', workingHoursPercentage: 100, order: 0 });
+    setNewEmployee({ name: '', type: 'general', color: '#CCCCCC', workingHoursPercentage: 100, order: 0, plannings: ['general'] });
     setEditingEmployeeId(null);
   };
 
@@ -84,7 +101,7 @@ const EmployeeManagement: React.FC = () => {
     if (!window.confirm('Supprimer cet employé ?')) return;
     const updated = reindex(employees.filter(emp => emp.id !== id));
     setEmployees(updated);
-    await supabaseService.deleteEmployee(id);
+    await firebaseService.deleteEmployee(id);
     await saveEmployees(updated);
   };
 
@@ -103,9 +120,28 @@ const EmployeeManagement: React.FC = () => {
             <option value="reinforcement">Renfort</option>
             <option value="interim">Intérim</option>
             <option value="intern">Stagiaire</option>
+            <option value="astreinte-msm">Astreinte salarié MSM</option>
+            <option value="astreinte-ca">Astreinte membre CA</option>
           </select>
           <input name="color" type="color" value={newEmployee.color} onChange={handleInputChange} className="h-10 w-full border rounded cursor-pointer" />
           <input name="workingHoursPercentage" type="number" value={newEmployee.workingHoursPercentage} onChange={handleInputChange} placeholder="% Heures contrat" className="p-2 border rounded" />
+
+          <div className="md:col-span-3">
+            <label className="block text-xs font-semibold text-gray-600 mb-1">Planning(s) affecté(s) :</label>
+            <div className="flex flex-wrap gap-2">
+              {ALL_PLANNINGS.map(planning => (
+                <label key={planning} className="flex items-center space-x-1 bg-white px-2 py-1 rounded border text-sm cursor-pointer hover:bg-msm-navy-light">
+                  <input
+                    type="checkbox"
+                    checked={(newEmployee.plannings ?? []).includes(planning)}
+                    onChange={() => togglePlanning(planning)}
+                    className="rounded"
+                  />
+                  <span>{PLANNING_LABELS[planning]}</span>
+                </label>
+              ))}
+            </div>
+          </div>
 
           <div className="flex space-x-2 md:col-span-2">
             <button onClick={editingEmployeeId ? handleUpdateEmployee : handleAddEmployee} className="bg-msm-navy text-white px-4 py-2 rounded flex-1">
@@ -123,6 +159,7 @@ const EmployeeManagement: React.FC = () => {
               <th className="p-2 border text-center w-20">Ordre</th>
               <th className="p-2 border text-left">Nom</th>
               <th className="p-2 border text-left">Type</th>
+              <th className="p-2 border text-left">Planning(s)</th>
               <th className="p-2 border text-center">Couleur</th>
               <th className="p-2 border text-center">% Heures</th>
               <th className="p-2 border text-right">Actions</th>
@@ -149,6 +186,13 @@ const EmployeeManagement: React.FC = () => {
                 </td>
                 <td className="p-2 border font-bold">{emp.name}</td>
                 <td className="p-2 border italic text-sm">{emp.type}</td>
+                <td className="p-2 border text-sm">
+                  <div className="flex flex-wrap gap-1">
+                    {(emp.plannings ?? []).map(p => (
+                      <span key={p} className="px-1.5 py-0.5 rounded bg-msm-navy-light text-xs">{PLANNING_LABELS[p]}</span>
+                    ))}
+                  </div>
+                </td>
                 <td className="p-2 border text-center"><div className="w-8 h-4 mx-auto rounded" style={{ backgroundColor: emp.color }}></div></td>
                 <td className="p-2 border text-center">{emp.workingHoursPercentage}%</td>
                 <td className="p-2 border text-right space-x-2">

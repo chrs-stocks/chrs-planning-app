@@ -1,4 +1,4 @@
-export type ShiftType = 'morning' | 'afternoon' | 'day' | 'off' | 'recovery' | 'meeting-morning' | 'meeting-afternoon' | 'training-week' | 'veilleur-day' | 'veilleur-night' | 'veilleur-off' | 'cuisinier-7h' | 'cuisinier-3h' | 'cuisinier-midi' | 'cuisinier-soir' | 'cuisinier-4h-commande' | 'astreinte-jour' | 'astreinte-soir' | 'veilleur-app' | 'overlay' | 'custom' | 'afternoon-week' | 'weekend-week';
+export type ShiftType = 'morning' | 'afternoon' | 'day' | 'off' | 'recovery' | 'meeting-morning' | 'meeting-afternoon' | 'training-week' | 'veilleur-day' | 'veilleur-night' | 'veilleur-off' | 'cuisinier-7h' | 'cuisinier-3h' | 'cuisinier-midi' | 'cuisinier-soir' | 'cuisinier-4h-commande' | 'astreinte-jour' | 'astreinte-soir' | 'astreinte-total' | 'veilleur-app' | 'overlay' | 'custom' | 'afternoon-week' | 'weekend-week';
 
 export interface Shift {
   id: string;
@@ -40,6 +40,7 @@ export const SHIFT_OPTIONS: Shift[] = [
   // Astreinte Shifts
   { id: 'astreinte-jour', name: 'Journée', time: '0h', type: 'astreinte-jour', color: '#ADD8E6', textColor: '#333333', shortCode: 'J' }, // Light Blue
   { id: 'astreinte-soir', name: 'Soir', time: '0h', type: 'astreinte-soir', color: '#87CEFA', textColor: '#333333', shortCode: 'S' }, // Light Sky Blue
+  { id: 'astreinte-total', name: 'Totalité (Jour+Soir)', time: '0h', type: 'astreinte-total', color: '#4682B4', textColor: '#FFFFFF', shortCode: 'J+S' }, // Steel Blue
   { id: 'custom', name: 'Shift Personnalisé', time: '0h', type: 'custom', color: '#CCCCCC', textColor: '#333333' }, // Generic custom shift
   // Overlay Shifts
   { id: 'overlay-sick-leave', name: 'Arrêt Maladie', time: '0h', type: 'overlay', color: '#FFCCCC', textColor: '#333333', shortCode: 'AM', isOverlay: true },

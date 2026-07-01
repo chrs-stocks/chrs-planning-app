@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { parseISO } from 'date-fns';
 import type { Shift } from '../data/shifts';
 import { SHIFT_OPTIONS } from '../data/shifts';
-import { loadEmployees } from '../data/employeeData';
-import type { Employee } from '../data/employeeTypes';
 
 interface Action {
   label: string;
@@ -46,7 +44,6 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
   onSelectCustomShift,
   onApplyToWeek,
   onApplyOverlayToWeek,
-  employeeId,
   date,
   x,
   y,
@@ -58,21 +55,14 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
 }) => {
   const [customTimeInput, setCustomTimeInput] = useState('');
   const [assignedPersonInitials, setAssignedPersonInitials] = useState('');
-  const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
   const [step, setStep] = useState<ModalStep>('select');
   const [pendingShift, setPendingShift] = useState<Shift | null>(null);
-
-  const isAstreinte = employeeId.startsWith('astreinte-');
 
   const dateObj = parseISO(date);
   const dow = dateObj.getDay();
   const isWeekendDay = dow === 0 || dow === 6;
   // Show week-apply only for general planning (onApplyToWeek provided) on weekdays non-fériés, hors jeudi
   const showWeekApply = !!onApplyToWeek && !isWeekendDay && !isHoliday && dow !== 4;
-
-  useEffect(() => {
-    setAllEmployees(loadEmployees());
-  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -89,16 +79,15 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
 
   if (!isOpen) return null;
 
-  const getAstreinteEmployees = () => {
-    if (employeeId === 'astreinte-msm-group') return allEmployees.filter(e => e.type === 'astreinte-msm');
-    if (employeeId === 'astreinte-ca-group') return allEmployees.filter(e => e.type === 'astreinte-ca');
-    return [];
-  };
-
-  // Constrain to viewport
+  // Constrain to viewport: la hauteur max autorisée dérive du même calcul que la position,
+  // pour garantir que la modale ne dépasse jamais l'espace réellement disponible à l'écran.
+  const MARGIN = 8;
   const MODAL_W = 340;
-  const safeX = Math.max(8, Math.min(x, (typeof window !== 'undefined' ? window.innerWidth : 800) - MODAL_W - 8));
-  const safeY = Math.max(8, Math.min(y, (typeof window !== 'undefined' ? window.innerHeight : 600) - 520));
+  const viewportW = typeof window !== 'undefined' ? window.innerWidth : 800;
+  const viewportH = typeof window !== 'undefined' ? window.innerHeight : 600;
+  const maxModalHeight = Math.min(viewportH - 2 * MARGIN, 640);
+  const safeX = Math.max(MARGIN, Math.min(x, viewportW - MODAL_W - MARGIN));
+  const safeY = Math.max(MARGIN, Math.min(y, viewportH - maxModalHeight - MARGIN));
 
   const handleCustomShiftSubmit = () => {
     const timeStr = customTimeInput.trim();
@@ -148,7 +137,6 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
   const allShiftsToDisplay = customShiftOptions || SHIFT_OPTIONS;
   const primaryShifts = allShiftsToDisplay.filter(s => !s.isOverlay);
   const overlayShifts = allShiftsToDisplay.filter(s => s.isOverlay);
-  const astreinteEmployees = getAstreinteEmployees();
 
   const stepTitle = step === 'confirm-week'
     ? 'Appliquer à la semaine ?'
@@ -160,38 +148,21 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
 
   return (
     <div
-      className="fixed bg-white rounded-lg shadow-xl z-50 border border-gray-200"
-      style={{ top: safeY, left: safeX, width: MODAL_W }}
+      className="fixed bg-white rounded-lg shadow-xl z-50 border border-gray-200 flex flex-col"
+      style={{ top: safeY, left: safeX, width: MODAL_W, maxHeight: maxModalHeight }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 bg-msm-navy text-white rounded-t-lg">
+      <div className="flex items-center justify-between px-3 py-2 bg-msm-navy text-white rounded-t-lg flex-shrink-0">
         <span className="text-sm font-bold truncate">{stepTitle}</span>
         <button onClick={onClose} className="ml-2 text-white hover:text-gray-200 text-xl leading-none flex-shrink-0">×</button>
       </div>
 
       {/* Scrollable content */}
-      <div className="overflow-y-auto p-3 space-y-3" style={{ maxHeight: '75vh' }}>
+      <div className="overflow-y-auto p-3 space-y-3 flex-1">
 
         {/* ── STEP: select ─────────────────────────────────────── */}
         {step === 'select' && (
           <>
-            {/* Astreinte selector */}
-            {isAstreinte && (
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Personne d'astreinte :</label>
-                <select
-                  className="w-full p-2 border rounded text-sm"
-                  value={assignedPersonInitials}
-                  onChange={e => setAssignedPersonInitials(e.target.value)}
-                >
-                  <option value="">Sélectionner...</option>
-                  {astreinteEmployees.map(emp => (
-                    <option key={emp.id} value={emp.initials || emp.name}>{emp.name} ({emp.initials})</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
             {/* Custom actions */}
             {actions.length > 0 && (
               <div className="grid grid-cols-2 gap-2">
@@ -199,7 +170,6 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
                   <button
                     key={i}
                     className={`p-2 rounded text-sm ${action.className || 'bg-gray-200 text-gray-800 hover:bg-gray-300'} disabled:opacity-50`}
-                    disabled={isAstreinte && !assignedPersonInitials}
                     onClick={() => { action.onClick(assignedPersonInitials); onClose(); }}
                   >
                     {action.label}
@@ -227,7 +197,6 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
                       key={shift.id}
                       className={`p-2 rounded text-left transition-all disabled:opacity-50 ${currentPrimaryShift?.id === shift.id ? 'ring-2 ring-msm-navy' : 'hover:opacity-80'}`}
                       style={{ backgroundColor: shift.color, color: shift.textColor || '#000' }}
-                      disabled={isAstreinte && !assignedPersonInitials}
                       onClick={() => handlePrimaryShiftClick(shift)}
                     >
                       <div className="text-sm font-semibold">{shift.name}</div>

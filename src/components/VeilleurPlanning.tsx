@@ -9,7 +9,7 @@ import { SHIFT_OPTIONS, ABSENCE_OVERLAY_IDS } from '../data/shifts';
 import Notes from './Notes';
 import { loadEmployees } from '../data/employeeData';
 import { useScheduleData } from '../hooks/useScheduleData';
-import { supabaseService } from '../supabaseService';
+import { firebaseService } from '../firebaseService';
 import { useAuth } from '../hooks/useAuth';
 import type { Employee } from '../data/employeeTypes';
 
@@ -110,7 +110,7 @@ const VeilleurPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHol
       });
       if (finalData) {
         const data = finalData as { primaryShift: Shift | null, overlays: Shift[] };
-        await trySave(() => supabaseService.saveSchedule(selectedEmployeeId, selectedDate, 'veilleur', data.primaryShift, data.overlays));
+        await trySave(() => firebaseService.saveSchedule(selectedEmployeeId, selectedDate, 'veilleur', data.primaryShift, data.overlays));
       }
     }
   };
@@ -123,7 +123,7 @@ const VeilleurPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHol
         if (empMap) { empMap.delete(selectedDate); if (empMap.size === 0) newSchedule.delete(selectedEmployeeId); }
         return newSchedule;
       });
-      await trySave(() => supabaseService.deleteSchedule(selectedEmployeeId, selectedDate, 'veilleur'));
+      await trySave(() => firebaseService.deleteSchedule(selectedEmployeeId, selectedDate, 'veilleur'));
     }
   };
 
@@ -134,7 +134,7 @@ const VeilleurPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHol
     }
   };
 
-  const veilleurs = allEmployees.filter(emp => emp.type === 'veilleur' && visibleEmployeeIds.has(emp.id)).sort((a, b) => {
+  const veilleurs = allEmployees.filter(emp => (emp.plannings ?? []).includes('veilleur') && visibleEmployeeIds.has(emp.id)).sort((a, b) => {
     if (a.id === 'veilleur-interim') return 1;
     if (b.id === 'veilleur-interim') return -1;
     return (a.order || 0) - (b.order || 0);
@@ -163,7 +163,7 @@ const VeilleurPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHol
       <div className="flex flex-wrap items-center gap-4 mb-4 no-print bg-gray-50 p-3 rounded border border-gray-200">
         <span className="font-semibold text-msm-navy">Filtrer Veilleurs :</span>
         <div className="flex flex-wrap gap-2">
-          {allEmployees.filter(e => e.type === 'veilleur').map(emp => (
+          {allEmployees.filter(e => (e.plannings ?? []).includes('veilleur')).map(emp => (
             <label key={emp.id} className="flex items-center space-x-1 bg-white px-2 py-1 rounded border text-sm cursor-pointer hover:bg-msm-navy-light">
               <input type="checkbox" checked={visibleEmployeeIds.has(emp.id)} onChange={() => toggleEmployeeVisibility(emp.id)} className="rounded" />
               <span>{emp.name}</span>
@@ -234,7 +234,7 @@ const VeilleurPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHol
         }`}>
           {saveStatus === 'saving' && '⏳ Sauvegarde…'}
           {saveStatus === 'saved'  && '✅ Sauvegardé'}
-          {saveStatus === 'error'  && '⚠️ Supabase inaccessible — données conservées localement'}
+          {saveStatus === 'error'  && '⚠️ Firebase inaccessible — données conservées localement'}
         </div>
       )}
     </div>

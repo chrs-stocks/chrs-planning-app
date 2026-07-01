@@ -9,7 +9,7 @@ import { SHIFT_OPTIONS, ABSENCE_OVERLAY_IDS } from '../data/shifts';
 import Notes from './Notes';
 import { loadEmployees } from '../data/employeeData';
 import { useScheduleData } from '../hooks/useScheduleData';
-import { supabaseService } from '../supabaseService';
+import { firebaseService } from '../firebaseService';
 import { useAuth } from '../hooks/useAuth';
 import type { Employee } from '../data/employeeTypes';
 
@@ -108,7 +108,7 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
       });
       if (finalData) {
         const data = finalData as { primaryShift: Shift | null, overlays: Shift[] };
-        await trySave(() => supabaseService.saveSchedule(selectedEmployeeId, selectedDate, 'cuisinier', data.primaryShift, data.overlays));
+        await trySave(() => firebaseService.saveSchedule(selectedEmployeeId, selectedDate, 'cuisinier', data.primaryShift, data.overlays));
       }
     }
   };
@@ -121,7 +121,7 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
         if (empMap) { empMap.delete(selectedDate); if (empMap.size === 0) newSchedule.delete(selectedEmployeeId); }
         return newSchedule;
       });
-      await trySave(() => supabaseService.deleteSchedule(selectedEmployeeId, selectedDate, 'cuisinier'));
+      await trySave(() => firebaseService.deleteSchedule(selectedEmployeeId, selectedDate, 'cuisinier'));
     }
   };
 
@@ -132,7 +132,7 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
     }
   };
 
-  const cuisiniers = allEmployees.filter(emp => emp.type === 'cuisinier' && visibleEmployeeIds.has(emp.id)).sort((a, b) => (a.order || 0) - (b.order || 0));
+  const cuisiniers = allEmployees.filter(emp => (emp.plannings ?? []).includes('cuisinier') && visibleEmployeeIds.has(emp.id)).sort((a, b) => (a.order || 0) - (b.order || 0));
   const days = getDaysInMonth(currentDate.getFullYear(), currentDate.getMonth());
   const weeks: { [key: number]: number } = {};
   days.forEach(day => { const w = getISOWeek(day); weeks[w] = (weeks[w] || 0) + 1; });
@@ -156,7 +156,7 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
       <div className="flex flex-wrap items-center gap-4 mb-4 no-print bg-gray-50 p-3 rounded border border-gray-200">
         <span className="font-semibold text-msm-navy">Filtrer Cuisiniers :</span>
         <div className="flex flex-wrap gap-2">
-          {allEmployees.filter(e => e.type === 'cuisinier').map(emp => (
+          {allEmployees.filter(e => (e.plannings ?? []).includes('cuisinier')).map(emp => (
             <label key={emp.id} className="flex items-center space-x-1 bg-white px-2 py-1 rounded border text-sm cursor-pointer hover:bg-msm-navy-light">
               <input type="checkbox" checked={visibleEmployeeIds.has(emp.id)} onChange={() => toggleEmployeeVisibility(emp.id)} className="rounded" />
               <span>{emp.name}</span>
@@ -227,7 +227,7 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
         }`}>
           {saveStatus === 'saving' && '⏳ Sauvegarde…'}
           {saveStatus === 'saved'  && '✅ Sauvegardé'}
-          {saveStatus === 'error'  && '⚠️ Supabase inaccessible — données conservées localement'}
+          {saveStatus === 'error'  && '⚠️ Firebase inaccessible — données conservées localement'}
         </div>
       )}
     </div>

@@ -1,12 +1,12 @@
 import React, { useState, useRef } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
-import { supabaseService } from '../supabaseService';
+import { firebaseService } from '../firebaseService';
 import { useAuth } from '../hooks/useAuth';
 
 type RequestType = 'ct' | 'recup' | 'overtime' | 'modif_horaire' | 'conge_parental' | 'conge_familial' | 'conge_sans_solde' | 'raison_familiale' | 'enfant_malade' | 'autre';
 
 const LeaveRequestForm: React.FC = () => {
-  const { user, loading: authLoading } = useAuth();
+  const { user, profileName, loading: authLoading } = useAuth();
   const [type, setType] = useState<RequestType>('ct');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
@@ -44,16 +44,14 @@ const LeaveRequestForm: React.FC = () => {
     setIsSubmitting(true);
     try {
       const signatureData = sigCanvas.current?.getTrimmedCanvas().toDataURL('image/png');
-      
-      await supabaseService.saveLeaveRequest({
-        type,
-        start_date: startDate,
-        end_date: endDate,
-        reason,
-        signature_data: signatureData || '',
-      });
 
-      alert('Votre demande a été enregistrée et envoyée sur Supabase !');
+      await firebaseService.saveLeaveRequest(
+        { type, start_date: startDate, end_date: endDate, reason, signature_data: signatureData || '' },
+        user.email!,
+        profileName || user.email!,
+      );
+
+      alert('Votre demande a été enregistrée !');
       setStartDate('');
       setEndDate('');
       setReason('');
@@ -88,12 +86,12 @@ const LeaveRequestForm: React.FC = () => {
         <h2 className="text-2xl font-bold text-msm-navy">Fiche de Demande / Signalement</h2>
         <span className="text-sm bg-gray-100 px-2 py-1 rounded text-gray-500 italic">Document numérique</span>
       </div>
-      
+
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label className="block text-sm font-medium text-gray-700">Type de document</label>
-          <select 
-            value={type} 
+          <select
+            value={type}
             onChange={(e) => setType(e.target.value as RequestType)}
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-msm-navy focus:ring-msm-sky p-2 border"
           >
@@ -117,8 +115,8 @@ const LeaveRequestForm: React.FC = () => {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700">Du (inclus)</label>
-            <input 
-              type="date" 
+            <input
+              type="date"
               value={startDate}
               onChange={(e) => setStartDate(e.target.value)}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border"
@@ -127,8 +125,8 @@ const LeaveRequestForm: React.FC = () => {
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Au (inclus)</label>
-            <input 
-              type="date" 
+            <input
+              type="date"
               value={endDate}
               onChange={(e) => setEndDate(e.target.value)}
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border"
@@ -139,7 +137,7 @@ const LeaveRequestForm: React.FC = () => {
 
         <div>
           <label className="block text-sm font-medium text-gray-700">Commentaire / Détails</label>
-          <textarea 
+          <textarea
             rows={3}
             value={reason}
             onChange={(e) => setReason(e.target.value)}
@@ -151,14 +149,14 @@ const LeaveRequestForm: React.FC = () => {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2 font-bold">Signature du salarié</label>
           <div className="border-2 border-dashed border-gray-300 rounded-md bg-gray-50">
-            <SignatureCanvas 
+            <SignatureCanvas
               ref={sigCanvas}
               penColor='black'
               canvasProps={{width: 500, height: 150, className: 'sigCanvas w-full'}}
             />
           </div>
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={clearSignature}
             className="mt-2 text-xs text-red-600 hover:text-red-800 underline"
           >
@@ -167,7 +165,7 @@ const LeaveRequestForm: React.FC = () => {
         </div>
 
         <div className="pt-4 border-t">
-          <button 
+          <button
             type="submit"
             disabled={isSubmitting}
             className={`w-full ${isSubmitting ? 'bg-gray-400' : 'bg-msm-navy hover:bg-msm-navy-dark'} text-white font-bold py-4 px-4 rounded-md transition-all shadow-lg active:scale-95`}

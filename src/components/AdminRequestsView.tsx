@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { supabaseService } from '../supabaseService';
-import type { LeaveRequest } from '../supabaseService';
+import { firebaseService } from '../firebaseService';
+import type { LeaveRequest } from '../firebaseService';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -10,7 +10,7 @@ const AdminRequestsView: React.FC = () => {
 
   const fetchRequests = async () => {
     setLoading(true);
-    const data = await supabaseService.getAllLeaveRequests();
+    const data = await firebaseService.getAllLeaveRequests();
     setRequests(data);
     setLoading(false);
   };
@@ -21,7 +21,7 @@ const AdminRequestsView: React.FC = () => {
 
   const handleStatusUpdate = async (id: string, status: 'approved' | 'rejected') => {
     try {
-      await supabaseService.updateLeaveRequestStatus(id, status);
+      await firebaseService.updateLeaveRequestStatus(id, status);
       setRequests(requests.map(r => r.id === id ? { ...r, status } : r));
     } catch {
       alert('Erreur lors de la mise à jour');
@@ -41,7 +41,7 @@ const AdminRequestsView: React.FC = () => {
   return (
     <div className="p-4 bg-white shadow-md rounded-lg">
       <h2 className="text-2xl font-bold mb-6 text-msm-navy">Gestion des Demandes Salariés</h2>
-      
+
       {requests.length === 0 ? (
         <p className="text-gray-500 italic">Aucune demande reçue pour le moment.</p>
       ) : (
@@ -65,7 +65,7 @@ const AdminRequestsView: React.FC = () => {
                     {format(new Date(req.created_at), 'dd/MM/yyyy HH:mm', { locale: fr })}
                   </td>
                   <td className="p-3 font-semibold">
-                    {req.profiles?.name || 'Inconnu'}
+                    {req.employee_name || req.employee_email || 'Inconnu'}
                   </td>
                   <td className="p-3">
                     <span className="uppercase text-xs font-bold bg-msm-navy-light text-msm-navy px-2 py-1 rounded">
@@ -93,13 +93,13 @@ const AdminRequestsView: React.FC = () => {
                   <td className="p-3 text-right space-x-2">
                     {req.status === 'pending' && (
                       <>
-                        <button 
+                        <button
                           onClick={() => handleStatusUpdate(req.id, 'approved')}
                           className="bg-green-500 text-white px-3 py-1 rounded text-xs hover:bg-green-600 shadow-sm"
                         >
                           Valider
                         </button>
-                        <button 
+                        <button
                           onClick={() => handleStatusUpdate(req.id, 'rejected')}
                           className="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600 shadow-sm"
                         >

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import type { Shift } from '../data/shifts';
 import { getShiftById } from '../data/shifts';
-import { supabaseService } from '../supabaseService';
-import type { SupabaseSchedule } from '../supabaseService';
+import { firebaseService } from '../firebaseService';
+import type { FirebaseSchedule } from '../firebaseService';
 
 // Define types for the schedule data
 type GeneralSchedule = Map<string, Map<string, { primaryShift: Shift | null, overlays: Shift[] }>>;
@@ -62,8 +62,7 @@ const resolveShiftId = (shiftId: string | null): Shift | null => {
   return getShiftById(shiftId) || null;
 };
 
-// Helper to convert Supabase rows back to the Map structure
-const mapSupabaseToSchedule = (rows: SupabaseSchedule[]): CuisinierVeilleurSchedule => {
+const mapFirebaseToSchedule = (rows: FirebaseSchedule[]): CuisinierVeilleurSchedule => {
   const map = new Map<string, Map<string, { primaryShift: Shift | null, overlays: Shift[] }>>();
   rows.forEach(row => {
     if (!map.has(row.employee_id)) {
@@ -101,24 +100,22 @@ export const useScheduleData = () => {
     }
   };
 
-  const syncWithSupabase = async () => {
+  const syncWithFirebase = async () => {
     setLoading(true);
     try {
       const [gen, cuis, veil, astr] = await Promise.all([
-        supabaseService.getSchedules('general'),
-        supabaseService.getSchedules('cuisinier'),
-        supabaseService.getSchedules('veilleur'),
-        supabaseService.getSchedules('astreinte')
+        firebaseService.getSchedules('general'),
+        firebaseService.getSchedules('cuisinier'),
+        firebaseService.getSchedules('veilleur'),
+        firebaseService.getSchedules('astreinte')
       ]);
 
-      if (gen && gen.length > 0) setGeneralSchedule(mapSupabaseToSchedule(gen));
-      if (cuis && cuis.length > 0) setCuisinierSchedule(mapSupabaseToSchedule(cuis));
-      if (veil && veil.length > 0) setVeilleurSchedule(mapSupabaseToSchedule(veil));
-      if (astr && astr.length > 0) setAstreinteSchedule(mapSupabaseToSchedule(astr));
-      
-      // We don't necessarily want to overwrite localStorage here unless we are sure Supabase is the truth
+      if (gen && gen.length > 0) setGeneralSchedule(mapFirebaseToSchedule(gen));
+      if (cuis && cuis.length > 0) setCuisinierSchedule(mapFirebaseToSchedule(cuis));
+      if (veil && veil.length > 0) setVeilleurSchedule(mapFirebaseToSchedule(veil));
+      if (astr && astr.length > 0) setAstreinteSchedule(mapFirebaseToSchedule(astr));
     } catch (error) {
-      console.error("Failed to sync with Supabase", error);
+      console.error("Failed to sync with Firebase", error);
     } finally {
       setLoading(false);
     }
@@ -126,7 +123,7 @@ export const useScheduleData = () => {
 
   useEffect(() => {
     loadLocalData();
-    syncWithSupabase(); // Try to sync on mount
+    syncWithFirebase();
 
     const handleScheduleChange = () => {
       loadLocalData();
@@ -139,7 +136,7 @@ export const useScheduleData = () => {
     };
   }, []);
 
-  return { generalSchedule, cuisinierSchedule, veilleurSchedule, astreinteSchedule, loading, syncWithSupabase };
+  return { generalSchedule, cuisinierSchedule, veilleurSchedule, astreinteSchedule, loading, syncWithFirebase };
 };
 
 // Helper to dispatch the event from components that modify the schedule

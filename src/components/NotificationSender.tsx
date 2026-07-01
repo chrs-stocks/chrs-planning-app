@@ -1,13 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import emailjs from '@emailjs/browser';
-import { supabase } from '../supabaseClient';
-
-interface Recipient {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-}
+import { firebaseService } from '../firebaseService';
+import type { UserProfile } from '../firebaseService';
 
 const SERVICE_ID  = import.meta.env.VITE_EMAILJS_SERVICE_ID;
 const TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
@@ -15,7 +9,7 @@ const PUBLIC_KEY  = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
 const APP_URL     = window.location.origin;
 
 const NotificationSender: React.FC = () => {
-  const [recipients, setRecipients]       = useState<Recipient[]>([]);
+  const [recipients, setRecipients]       = useState<UserProfile[]>([]);
   const [selected, setSelected]           = useState<Set<string>>(new Set());
   const [subject, setSubject]             = useState('Mise à jour du planning');
   const [message, setMessage]             = useState('');
@@ -30,17 +24,13 @@ const NotificationSender: React.FC = () => {
 
   const fetchRecipients = async () => {
     setLoadingRecipients(true);
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, name, role, email')
-      .not('email', 'is', null)
-      .order('role', { ascending: false });
-
-    if (!error && data) {
-      const valid = (data as Recipient[]).filter(r => r.email?.trim());
-      setRecipients(valid);
-      // Pré-sélectionner tous les employés par défaut
-      setSelected(new Set(valid.filter(r => r.role === 'employee').map(r => r.id)));
+    try {
+      const data = await firebaseService.getUsers();
+      const sorted = data.sort((a, b) => a.role === 'admin' ? -1 : b.role === 'admin' ? 1 : 0);
+      setRecipients(sorted);
+      setSelected(new Set(sorted.filter(r => r.role === 'employee').map(r => r.id)));
+    } catch (err) {
+      console.error('Erreur chargement destinataires:', err);
     }
     setLoadingRecipients(false);
   };
@@ -78,7 +68,6 @@ const NotificationSender: React.FC = () => {
       } catch {
         newResults.push({ name: r.name, ok: false });
       }
-      // Pause pour éviter le rate limit EmailJS
       await new Promise(res => setTimeout(res, 200));
     }
 
@@ -99,12 +88,11 @@ const NotificationSender: React.FC = () => {
         <p className="text-center text-gray-400 py-8">Chargement des destinataires...</p>
       ) : recipients.length === 0 ? (
         <div className="bg-orange-50 border border-orange-200 rounded p-4 text-orange-800 text-sm">
-          Aucun destinataire trouvé. Assurez-vous que les profils ont bien une adresse email enregistrée.
+          Aucun destinataire trouvé. Assurez-vous que des utilisateurs sont enregistrés dans Gestion des accès.
         </div>
       ) : (
         <form onSubmit={handleSend} className="space-y-5">
 
-          {/* Destinataires */}
           <div>
             <div className="flex justify-between items-center mb-2">
               <label className="font-semibold text-gray-700">Destinataires</label>
@@ -133,7 +121,6 @@ const NotificationSender: React.FC = () => {
             <p className="text-xs text-gray-400 mt-1">{selected.size} destinataire{selected.size > 1 ? 's' : ''} sélectionné{selected.size > 1 ? 's' : ''}</p>
           </div>
 
-          {/* Objet */}
           <div>
             <label className="block font-semibold text-gray-700 mb-1">Objet</label>
             <input
@@ -145,7 +132,6 @@ const NotificationSender: React.FC = () => {
             />
           </div>
 
-          {/* Message */}
           <div>
             <label className="block font-semibold text-gray-700 mb-1">Message</label>
             <textarea
@@ -159,7 +145,6 @@ const NotificationSender: React.FC = () => {
             <p className="text-xs text-gray-400 mt-1">Le lien vers l'application sera ajouté automatiquement en bas de l'email.</p>
           </div>
 
-          {/* Résultats */}
           {results.length > 0 && (
             <div className={`p-4 rounded-lg border ${failed === 0 ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-orange-200'}`}>
               <p className="font-semibold mb-2">

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
-import type { User } from '@supabase/supabase-js';
+import { onAuthStateChanged, isSignInWithEmailLink, signInWithEmailLink, signOut } from 'firebase/auth';
+import type { User } from 'firebase/auth';
+import { auth } from '../firebaseClient';
+import { firebaseService } from '../firebaseService';
 
 export const useAuth = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -8,43 +10,49 @@ export const useAuth = () => {
   const [profileName, setProfileName] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role, name')
-      .eq('id', userId)
-      .single();
-    setRole(profile?.role || 'employee');
-    setProfileName(profile?.name || null);
-  };
-
   useEffect(() => {
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setUser(session.user);
-        await fetchProfile(session.user.id);
+    if (isSignInWithEmailLink(auth, window.location.href)) {
+      const email =
+        window.localStorage.getItem('emailForSignIn') ||
+        window.prompt('Confirmez votre adresse email pour finaliser la connexion :');
+      if (email) {
+        signInWithEmailLink(auth, email, window.location.href)
+          .then(async result => {
+            window.localStorage.removeItem('emailForSignIn');
+            window.history.replaceState({}, document.title, window.location.pathname);
+            const profile = await firebaseService.getUserByEmail(result.user.email!);
+            if (!profile) {
+              await signOut(auth);
+              alert("Cette adresse email n'est pas autorisée. Contactez votre administrateur.");
+            }
+          })
+          .catch(err => console.error('Erreur connexion par lien :', err));
       }
-      setLoading(false);
-    };
+    }
 
-    getSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setUser(session?.user || null);
-      if (session) {
-        await fetchProfile(session.user.id);
+    const unsubscribe = onAuthStateChanged(auth, async firebaseUser => {
+      if (firebaseUser?.email) {
+        const profile = await firebaseService.getUserByEmail(firebaseUser.email);
+        if (profile) {
+          setUser(firebaseUser);
+          setRole(profile.role);
+          setProfileName(profile.name);
+        } else {
+          await signOut(auth);
+          setUser(null);
+          setRole(null);
+          setProfileName(null);
+        }
       } else {
+        setUser(null);
         setRole(null);
         setProfileName(null);
       }
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => unsubscribe();
   }, []);
 
-  const isAdmin = role === 'admin';
-
-  return { user, role, isAdmin, loading, profileName };
+  return { user, role, isAdmin: role === 'admin', loading, profileName };
 };

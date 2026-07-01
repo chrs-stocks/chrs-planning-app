@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
-import { supabase } from '../supabaseClient';
+import { sendSignInLinkToEmail, signOut } from 'firebase/auth';
+import { auth } from '../firebaseClient';
 import { useAuth } from '../hooks/useAuth';
+
+const actionCodeSettings = {
+  url: import.meta.env.VITE_APP_URL || window.location.origin,
+  handleCodeInApp: true,
+};
 
 const Login: React.FC = () => {
   const { user, profileName, isAdmin } = useAuth();
@@ -13,28 +19,18 @@ const Login: React.FC = () => {
     e.preventDefault();
     setLoading(true);
     setError(null);
-
-    const { error } = await supabase.auth.signInWithOtp({
-      email: email.trim(),
-      options: {
-        shouldCreateUser: false, // seuls les comptes existants peuvent se connecter
-      },
-    });
-
-    if (error) {
-      if (error.message.includes('Signups not allowed')) {
-        setError("Cette adresse email n'est pas enregistrée dans l'application. Contactez votre administrateur.");
-      } else {
-        setError("Erreur lors de l'envoi : " + error.message);
-      }
-    } else {
+    try {
+      await sendSignInLinkToEmail(auth, email.trim(), actionCodeSettings);
+      window.localStorage.setItem('emailForSignIn', email.trim());
       setSent(true);
+    } catch (err: any) {
+      setError("Erreur lors de l'envoi : " + err.message);
     }
     setLoading(false);
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut(auth);
   };
 
   if (user) {

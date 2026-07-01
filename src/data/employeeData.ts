@@ -1,11 +1,29 @@
-import type { Employee, EmployeeType } from './employeeTypes';
+import type { Employee, EmployeeType, PlanningKey } from './employeeTypes';
 import { employees as generalEmployees } from './employees';
 import { cuisiniers as cuisinierEmployees } from './cuisiniers';
 import { veilleurs as veilleurEmployees } from './veilleurs';
 import { astreinteMSM, astreinteCA } from './astreintes';
-import { supabaseService } from '../supabaseService';
+import { firebaseService } from '../firebaseService';
 
 const LOCAL_STORAGE_KEY = 'allEmployees';
+
+// Planning(s) par défaut dérivé du type, pour les employés créés avant l'introduction
+// du champ `plannings` (migration transparente des données locales/Firebase existantes).
+export const DEFAULT_PLANNINGS_BY_TYPE: Record<EmployeeType, PlanningKey[]> = {
+  general: ['general'],
+  reinforcement: ['general'],
+  interim: ['general'],
+  intern: ['general'],
+  veilleur: ['veilleur'],
+  cuisinier: ['cuisinier'],
+  'astreinte-msm': ['astreinte'],
+  'astreinte-ca': ['astreinte'],
+};
+
+const normalizeEmployee = (emp: Employee): Employee => {
+  if (emp.plannings && emp.plannings.length > 0) return emp;
+  return { ...emp, plannings: DEFAULT_PLANNINGS_BY_TYPE[emp.type] ?? ['general'] };
+};
 
 const initialEmployees: Employee[] = (() => {
   const combinedEmployees: Employee[] = [
@@ -16,38 +34,33 @@ const initialEmployees: Employee[] = (() => {
     ...astreinteCA.map(emp => ({ ...emp, type: 'astreinte-ca' as EmployeeType })),
   ];
   const uniqueEmployeesMap = new Map<string, Employee>();
-  combinedEmployees.forEach(emp => uniqueEmployeesMap.set(emp.id, emp));
+  combinedEmployees.forEach(emp => uniqueEmployeesMap.set(emp.id, normalizeEmployee(emp)));
   return Array.from(uniqueEmployeesMap.values());
 })();
 
 export const loadEmployees = (): Employee[] => {
   const savedEmployeesJSON = localStorage.getItem(LOCAL_STORAGE_KEY);
 
-  // Premier démarrage : localStorage vide → on retourne la liste initiale codée en dur
   if (!savedEmployeesJSON) {
     return initialEmployees;
   }
 
-  // Sinon on respecte exactement ce qui est en localStorage (suppressions incluses)
-  return JSON.parse(savedEmployeesJSON) as Employee[];
+  return (JSON.parse(savedEmployeesJSON) as Employee[]).map(normalizeEmployee);
 };
 
-export const syncEmployeesWithSupabase = async () => {
+export const syncEmployeesWithFirebase = async () => {
   try {
-    const supabaseEmployees = await supabaseService.getEmployees();
-    if (supabaseEmployees.length > 0) {
-      // Supabase a des données → source de vérité
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(supabaseEmployees));
-      return supabaseEmployees;
+    const firebaseEmployees = (await firebaseService.getEmployees()).map(normalizeEmployee);
+    if (firebaseEmployees.length > 0) {
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(firebaseEmployees));
+      return firebaseEmployees;
     }
-    // Supabase vide : on initialise depuis localStorage ou les données codées en dur
     const seed = loadEmployees().length > 0 ? loadEmployees() : initialEmployees;
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(seed));
-    await supabaseService.saveEmployees(seed);
+    await firebaseService.saveEmployees(seed);
     return seed;
   } catch (error) {
-    console.error("Failed to sync employees with Supabase", error);
-    // Fallback complet : localStorage, sinon liste initiale codée en dur
+    console.error("Failed to sync employees with Firebase", error);
     const local = loadEmployees();
     return local.length > 0 ? local : initialEmployees;
   }
@@ -56,9 +69,9 @@ export const syncEmployeesWithSupabase = async () => {
 export const saveEmployees = async (employees: Employee[]) => {
   localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(employees));
   try {
-    await supabaseService.saveEmployees(employees);
+    await firebaseService.saveEmployees(employees);
   } catch (error) {
-    console.error("Failed to save employees to Supabase", error);
+    console.error("Failed to save employees to Firebase", error);
   }
 };
 

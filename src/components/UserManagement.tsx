@@ -1,12 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../supabaseClient';
-
-interface Profile {
-  id: string;
-  name: string;
-  role: 'admin' | 'employee';
-  email?: string;
-}
+import { firebaseService } from '../firebaseService';
+import type { UserProfile } from '../firebaseService';
 
 const ROLE_LABELS: Record<string, string> = {
   admin: 'Direction / Admin',
@@ -14,7 +8,7 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const UserManagement: React.FC = () => {
-  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [profiles, setProfiles] = useState<UserProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -27,15 +21,11 @@ const UserManagement: React.FC = () => {
   const fetchProfiles = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id, name, role')
-        .order('role', { ascending: false });
-      if (error) throw error;
-      if (data) setProfiles(data as Profile[]);
+      const data = await firebaseService.getUsers();
+      setProfiles(data.sort((a, b) => a.role === 'admin' ? -1 : b.role === 'admin' ? 1 : 0));
     } catch (err) {
       console.error('Erreur chargement profils:', err);
-      setMessage({ type: 'error', text: 'Impossible de charger les utilisateurs. Vérifiez votre connexion.' });
+      setMessage({ type: 'error', text: 'Impossible de charger les utilisateurs.' });
     } finally {
       setLoading(false);
     }
@@ -45,59 +35,30 @@ const UserManagement: React.FC = () => {
     fetchProfiles();
   }, []);
 
-
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     setMessage(null);
-
-    // Crée le compte avec un mot de passe aléatoire (jamais utilisé — connexion par lien uniquement)
-    const randomPassword = Array.from(crypto.getRandomValues(new Uint8Array(18)))
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('');
-
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email: email.trim(),
-      password: randomPassword,
-    });
-
-    if (signUpError) {
-      setMessage({ type: 'error', text: `Erreur création compte : ${signUpError.message}` });
-      setSubmitting(false);
-      return;
-    }
-
-    if (!data.user) {
-      setMessage({ type: 'error', text: 'Compte créé mais ID utilisateur introuvable.' });
-      setSubmitting(false);
-      return;
-    }
-
-    // Créer le profil
-    const { error: profileError } = await supabase
-      .from('profiles')
-      .upsert({ id: data.user.id, name: name.trim(), role, email: email.trim() });
-
-    if (profileError) {
-      setMessage({ type: 'error', text: `Compte créé mais erreur profil : ${profileError.message}` });
-    } else {
-      setMessage({ type: 'success', text: `✅ Compte créé pour ${name.trim()}. Ils pourront se connecter avec leur email : ${email.trim()}` });
+    try {
+      await firebaseService.createUser(email.trim(), name.trim(), role);
+      setMessage({ type: 'success', text: `Compte créé pour ${name.trim()}. Ils pourront se connecter avec : ${email.trim()}` });
       await fetchProfiles();
       setName('');
       setEmail('');
       setRole('employee');
+    } catch (err: any) {
+      setMessage({ type: 'error', text: `Erreur : ${err.message}` });
     }
-
     setSubmitting(false);
   };
 
-  const handleDeleteProfile = async (id: string, userName: string) => {
-    if (!confirm(`Supprimer le compte de ${userName} ? Cette action est irréversible.`)) return;
-    const { error } = await supabase.from('profiles').delete().eq('id', id);
-    if (error) {
-      alert(`Erreur : ${error.message}`);
-    } else {
-      setProfiles(prev => prev.filter(p => p.id !== id));
+  const handleDeleteProfile = async (profile: UserProfile) => {
+    if (!confirm(`Supprimer le compte de ${profile.name} ? Cette action est irréversible.`)) return;
+    try {
+      await firebaseService.deleteUser(profile.email);
+      setProfiles(prev => prev.filter(p => p.id !== profile.id));
+    } catch (err: any) {
+      alert(`Erreur : ${err.message}`);
     }
   };
 
@@ -187,6 +148,7 @@ const UserManagement: React.FC = () => {
         <thead>
           <tr className="bg-gray-100 border-b-2 border-gray-200 text-left">
             <th className="p-3">Nom</th>
+            <th className="p-3">Email</th>
             <th className="p-3">Rôle</th>
             <th className="p-3 text-right">Actions</th>
           </tr>
@@ -195,6 +157,7 @@ const UserManagement: React.FC = () => {
           {profiles.map(p => (
             <tr key={p.id} className="border-b hover:bg-gray-50">
               <td className="p-3 font-semibold">{p.name}</td>
+              <td className="p-3 text-sm text-gray-500">{p.email}</td>
               <td className="p-3">
                 <span className={`px-2 py-1 rounded-full text-xs font-bold ${p.role === 'admin' ? 'bg-red-100 text-msm-red' : 'bg-msm-navy-light text-msm-navy'}`}>
                   {ROLE_LABELS[p.role] ?? p.role}
@@ -202,7 +165,7 @@ const UserManagement: React.FC = () => {
               </td>
               <td className="p-3 text-right">
                 <button
-                  onClick={() => handleDeleteProfile(p.id, p.name)}
+                  onClick={() => handleDeleteProfile(p)}
                   className="text-xs text-red-500 hover:text-red-700 underline"
                 >
                   Supprimer
@@ -211,14 +174,10 @@ const UserManagement: React.FC = () => {
             </tr>
           ))}
           {profiles.length === 0 && (
-            <tr><td colSpan={3} className="p-4 text-center text-gray-400 italic">Aucun profil trouvé</td></tr>
+            <tr><td colSpan={4} className="p-4 text-center text-gray-400 italic">Aucun profil trouvé</td></tr>
           )}
         </tbody>
       </table>
-
-      <p className="mt-4 text-xs text-gray-400 italic">
-        Note : la suppression retire l'accès à l'app mais ne supprime pas le compte d'authentification Supabase. Pour une suppression complète, allez dans le dashboard Supabase → Authentication → Users.
-      </p>
     </div>
   );
 };
