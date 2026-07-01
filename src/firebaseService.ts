@@ -53,6 +53,7 @@ export const firebaseService = {
           workingHoursPercentage: emp.workingHoursPercentage,
           order: emp.order ?? 0,
           plannings: emp.plannings ?? [],
+          nonWorkingDays: emp.nonWorkingDays ?? [],
         })
       )
     );
