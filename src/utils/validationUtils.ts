@@ -284,6 +284,11 @@ export const validateSchedules = (
   // ── Validation cuisiniers ────────────────────────────────────────────────────
   if (context === 'cuisiniers' || context === 'all') {
     daysInPeriod.forEach(day => {
+      // Le mercredi et le week-end, il n'y a jamais de cuisinier planifié (relayé par des
+      // bénévoles/résidents pour la réchauffe) — ne pas signaler d'alerte ces jours-là.
+      const cuisinierDow = day.getDay();
+      if (cuisinierDow === 0 || cuisinierDow === 3 || cuisinierDow === 6) return;
+
       const ds = format(day, 'yyyy-MM-dd');
       const disp = format(day, 'dd/MM/yyyy');
       let hasKitchenMidi = false;
