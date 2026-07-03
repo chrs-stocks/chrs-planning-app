@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { format, isFrenchPublicHoliday } from '../utils/dateUtils';
+import { format, isFrenchPublicHoliday, getDaysInMonth } from '../utils/dateUtils';
 import { fr } from 'date-fns/locale';
 import type { Shift } from '../data/shifts';
 import { getContrastingTextColor, tintOverWhite } from '../utils/colorUtils';
@@ -144,6 +144,35 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
     }
   };
 
+  // Remplit tout le mois en cours pour les jours de la semaine cochés (ex: Nadine = Lun/Mar/Jeu/Ven,
+  // 7h, quel que soit le mois — les jours fériés ne sont pas traités différemment ici, contrairement
+  // au planning général). Ne touche jamais un jour déjà renseigné (congé, absence, autre horaire…).
+  const handleApplyToMonth = async (shift: Shift, daysOfWeek: number[]) => {
+    if (!selectedEmployeeId) return;
+    const employeeId = selectedEmployeeId;
+    const dowSet = new Set(daysOfWeek);
+    const monthDays = getDaysInMonth(currentDate.getFullYear(), currentDate.getMonth());
+    const employeeSchedule = schedule.get(employeeId);
+    const datesToFill = monthDays
+      .filter(day => dowSet.has(day.getDay()))
+      .map(day => format(day, 'yyyy-MM-dd'))
+      .filter(dateStr => !employeeSchedule?.get(dateStr));
+
+    if (datesToFill.length === 0) return;
+
+    setSchedule((prevSchedule) => {
+      const newSchedule = new Map(prevSchedule);
+      const empDayData = new Map(newSchedule.get(employeeId) ?? new Map());
+      datesToFill.forEach(dateStr => empDayData.set(dateStr, { primaryShift: shift, overlays: [] }));
+      newSchedule.set(employeeId, empDayData);
+      return newSchedule;
+    });
+
+    await trySave(async () => {
+      await Promise.all(datesToFill.map(dateStr => firebaseService.saveSchedule(employeeId, dateStr, 'cuisinier', shift, [])));
+    });
+  };
+
   const cuisiniers = allEmployees.filter(emp => (emp.plannings ?? []).includes('cuisinier') && visibleEmployeeIds.has(emp.id)).sort((a, b) => (a.order || 0) - (b.order || 0));
   const { viewMode, setViewMode, days, weeks, goToPrev, goToNext, periodLabel } = useDayRange(currentDate, setCurrentDate);
 
@@ -244,7 +273,7 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
         </table>
       </div>
       {isModalOpen && selectedEmployeeId && selectedDate && (
-        <ShiftSelectionModal isOpen={isModalOpen} onClose={handleCloseModal} onSelectShift={handleSelectShift} onClearShift={handleClearShift} onSelectCustomShift={handleSelectCustomShift} employeeId={selectedEmployeeId} date={selectedDate} x={modalX} y={modalY} customShiftOptions={SHIFT_OPTIONS.filter(s => s.type.startsWith('cuisinier') || s.isOverlay)} currentPrimaryShift={schedule.get(selectedEmployeeId)?.get(selectedDate)?.primaryShift} currentOverlays={schedule.get(selectedEmployeeId)?.get(selectedDate)?.overlays} />
+        <ShiftSelectionModal isOpen={isModalOpen} onClose={handleCloseModal} onSelectShift={handleSelectShift} onClearShift={handleClearShift} onSelectCustomShift={handleSelectCustomShift} onApplyToMonth={handleApplyToMonth} employeeId={selectedEmployeeId} date={selectedDate} x={modalX} y={modalY} customShiftOptions={SHIFT_OPTIONS.filter(s => s.type.startsWith('cuisinier') || s.isOverlay)} currentPrimaryShift={schedule.get(selectedEmployeeId)?.get(selectedDate)?.primaryShift} currentOverlays={schedule.get(selectedEmployeeId)?.get(selectedDate)?.overlays} />
       )}
       <Notes currentDate={currentDate} context="cuisiniers" />
       {saveStatus !== 'idle' && (

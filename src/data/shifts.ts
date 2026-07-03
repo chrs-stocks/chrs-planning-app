@@ -1,4 +1,4 @@
-export type ShiftType = 'morning' | 'afternoon' | 'day' | 'off' | 'recovery' | 'meeting-morning' | 'meeting-afternoon' | 'training-week' | 'veilleur-day' | 'veilleur-night' | 'veilleur-off' | 'cuisinier-7h' | 'cuisinier-3h' | 'cuisinier-midi' | 'cuisinier-soir' | 'cuisinier-4h-commande' | 'astreinte-jour' | 'astreinte-soir' | 'astreinte-total' | 'veilleur-app' | 'overlay' | 'custom' | 'afternoon-week' | 'weekend-week';
+export type ShiftType = 'morning' | 'afternoon' | 'day' | 'off' | 'recovery' | 'meeting-morning' | 'meeting-afternoon' | 'training-week' | 'veilleur-day' | 'veilleur-night' | 'veilleur-off' | 'cuisinier-7h' | 'cuisinier-3h' | 'cuisinier-midi' | 'cuisinier-soir' | 'cuisinier-4h-commande' | 'cuisinier-midi-soir' | 'cuisinier-soir-fixe' | 'astreinte-jour' | 'astreinte-soir' | 'astreinte-total' | 'veilleur-app' | 'overlay' | 'custom' | 'afternoon-week' | 'weekend-week';
 
 export interface Shift {
   id: string;
@@ -39,6 +39,8 @@ export const SHIFT_OPTIONS: Shift[] = [
   { id: 'cuisinier-midi', name: 'Midi', time: '4h', type: 'cuisinier-midi', color: '#A569BD', textColor: '#FFFFFF' }, // Purple
   { id: 'cuisinier-soir', name: 'Soir', time: '3h', type: 'cuisinier-soir', color: '#48C9B0', textColor: '#333333' }, // Medium Aquamarine
   { id: 'cuisinier-4h-commande', name: '4h Commande', time: '4h', type: 'cuisinier-4h-commande', color: '#FFDAB9', textColor: '#333333' }, // Light Orange
+  { id: 'cuisinier-midi-soir', name: 'Midi + Soir', time: '10:00-13:00 / 17:00-20:00', type: 'cuisinier-midi-soir', color: '#85C1E9', textColor: '#333333' }, // Light Blue — horaire récurrent Hubert
+  { id: 'cuisinier-soir-fixe', name: 'Soir', time: '17:00-20:00', type: 'cuisinier-soir-fixe', color: '#73C6B6', textColor: '#333333' }, // Teal — horaire récurrent Hubert
   // Astreinte Shifts
   { id: 'astreinte-jour', name: 'Journée', time: '0h', type: 'astreinte-jour', color: '#ADD8E6', textColor: '#333333', shortCode: 'J' }, // Light Blue
   { id: 'astreinte-soir', name: 'Soir', time: '0h', type: 'astreinte-soir', color: '#87CEFA', textColor: '#333333', shortCode: 'S' }, // Light Sky Blue

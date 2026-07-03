@@ -17,6 +17,7 @@ interface ShiftSelectionModalProps {
   onSelectCustomShift: (customTime: string, assignedPersonInitials?: string) => void;
   onApplyToWeek?: (shift: Shift, thursdayShift: Shift | null) => void;
   onApplyOverlayToWeek?: (overlay: Shift) => void;
+  onApplyToMonth?: (shift: Shift, daysOfWeek: number[]) => void;
   employeeId: string;
   date: string;
   x: number;
@@ -28,13 +29,26 @@ interface ShiftSelectionModalProps {
   isHoliday?: boolean;
 }
 
-type ModalStep = 'select' | 'confirm-week' | 'thursday-pick' | 'confirm-overlay-week' | 'overlay-duration';
+type ModalStep = 'select' | 'confirm-week' | 'thursday-pick' | 'confirm-overlay-week' | 'overlay-duration' | 'confirm-month';
 
 const THURSDAY_SHIFTS: Shift[] = [
   { id: 'thu-extended', name: 'Matin étendu', time: '09:00-16:00', type: 'morning', color: '#FFDDC1', textColor: '#333333' },
   { id: 'thu-meeting', name: 'Réunion matin', time: '09:00-13:00', type: 'meeting-morning', color: '#ADD8E6', textColor: '#333333' },
   { id: 'thu-split', name: 'Matin + soir', time: '09:00-12:00 / 16:00-20:00', type: 'custom', color: '#C8E6C9', textColor: '#333333' },
 ];
+
+// Jours de la semaine cochables pour le remplissage mensuel : { libellé, valeur getDay() }.
+// Lundi-Vendredi cochés par défaut (cas le plus courant), Samedi/Dimanche disponibles mais décochés.
+const WEEK_DAY_OPTIONS: { label: string; dow: number }[] = [
+  { label: 'Lun', dow: 1 },
+  { label: 'Mar', dow: 2 },
+  { label: 'Mer', dow: 3 },
+  { label: 'Jeu', dow: 4 },
+  { label: 'Ven', dow: 5 },
+  { label: 'Sam', dow: 6 },
+  { label: 'Dim', dow: 0 },
+];
+const DEFAULT_MONTH_DAYS = new Set([1, 2, 3, 4, 5]);
 
 export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
   isOpen,
@@ -44,6 +58,7 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
   onSelectCustomShift,
   onApplyToWeek,
   onApplyOverlayToWeek,
+  onApplyToMonth,
   employeeId,
   date,
   x,
@@ -60,12 +75,14 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
   const [assignedPersonInitials, setAssignedPersonInitials] = useState('');
   const [step, setStep] = useState<ModalStep>('select');
   const [pendingShift, setPendingShift] = useState<Shift | null>(null);
+  const [selectedMonthDays, setSelectedMonthDays] = useState<Set<number>>(new Set(DEFAULT_MONTH_DAYS));
 
   const dateObj = parseISO(date);
   const dow = dateObj.getDay();
   const isWeekendDay = dow === 0 || dow === 6;
   // Show week-apply only for general planning (onApplyToWeek provided) on weekdays non-fériés, hors jeudi
   const showWeekApply = !!onApplyToWeek && !isWeekendDay && !isHoliday && dow !== 4;
+  const showMonthApply = !!onApplyToMonth;
 
   useEffect(() => {
     if (isOpen) {
@@ -74,6 +91,7 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
       setCustomTimeInput('');
       setCustomOverlayInput('');
       setOverlayDurationInput('');
+      setSelectedMonthDays(new Set(DEFAULT_MONTH_DAYS));
     }
   }, [isOpen]);
 
@@ -144,13 +162,22 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
   };
 
   const handlePrimaryShiftClick = (shift: Shift) => {
-    if (showWeekApply) {
+    if (showMonthApply) {
+      setPendingShift(shift);
+      setStep('confirm-month');
+    } else if (showWeekApply) {
       setPendingShift(shift);
       setStep('confirm-week');
     } else {
       onSelectShift(shift, false, assignedPersonInitials);
       onClose();
     }
+  };
+
+  const handleConfirmMonth = () => {
+    if (!pendingShift || selectedMonthDays.size === 0) return;
+    onApplyToMonth!(pendingShift, Array.from(selectedMonthDays));
+    onClose();
   };
 
   const handleConfirmWeek = (applyToWeek: boolean) => {
@@ -187,6 +214,8 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
     ? 'Ajouter à la semaine ?'
     : step === 'overlay-duration'
     ? `Durée — ${pendingShift?.name ?? ''}`
+    : step === 'confirm-month'
+    ? 'Remplir le mois ?'
     : `Horaire — ${date}`;
 
   return (
@@ -390,6 +419,57 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
               <button
                 className="p-3 bg-gray-200 text-gray-800 rounded font-bold hover:bg-gray-300 text-sm"
                 onClick={() => { onSelectShift(pendingShift, true, assignedPersonInitials); onClose(); }}
+              >
+                Ce jour seulement
+              </button>
+            </div>
+            <button className="w-full text-xs text-gray-400 underline" onClick={() => setStep('select')}>← Retour</button>
+          </>
+        )}
+
+        {/* ── STEP: confirm-month ─────────────────────────────── */}
+        {step === 'confirm-month' && pendingShift && (
+          <>
+            <div className="rounded p-3 text-center" style={{ backgroundColor: pendingShift.color, color: pendingShift.textColor }}>
+              <div className="font-bold">{pendingShift.name}</div>
+              <div className="text-xs opacity-75">{pendingShift.time}</div>
+            </div>
+            <p className="text-sm text-gray-700">
+              Remplir <strong>tout le mois</strong> avec cet horaire, sur les jours cochés ci-dessous ? Les jours déjà renseignés (congé, absence…) ne seront pas modifiés.
+            </p>
+            <div className="grid grid-cols-4 gap-1">
+              {WEEK_DAY_OPTIONS.map(({ label, dow: optDow }) => {
+                const checked = selectedMonthDays.has(optDow);
+                return (
+                  <label key={optDow} className={`flex items-center justify-center gap-1 text-xs rounded px-2 py-1.5 cursor-pointer border ${checked ? 'bg-msm-navy-light border-msm-navy text-msm-navy font-semibold' : 'bg-gray-50 border-gray-200 text-gray-600'}`}>
+                    <input
+                      type="checkbox"
+                      className="rounded"
+                      checked={checked}
+                      onChange={() => {
+                        setSelectedMonthDays(prev => {
+                          const next = new Set(prev);
+                          if (next.has(optDow)) next.delete(optDow); else next.add(optDow);
+                          return next;
+                        });
+                      }}
+                    />
+                    {label}
+                  </label>
+                );
+              })}
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                className="p-3 bg-msm-navy text-white rounded font-bold hover:bg-msm-navy-dark text-sm disabled:opacity-50"
+                onClick={handleConfirmMonth}
+                disabled={selectedMonthDays.size === 0}
+              >
+                Remplir le mois
+              </button>
+              <button
+                className="p-3 bg-gray-200 text-gray-800 rounded font-bold hover:bg-gray-300 text-sm"
+                onClick={() => { onSelectShift(pendingShift, false, assignedPersonInitials); onClose(); }}
               >
                 Ce jour seulement
               </button>
