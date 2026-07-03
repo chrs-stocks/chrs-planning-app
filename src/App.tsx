@@ -4,6 +4,7 @@ import VeilleurPlanning from './components/VeilleurPlanning';
 import CuisinierPlanning from './components/CuisinierPlanning';
 import AstreintePlanning from './components/AstreintePlanning';
 import EmployeeManagement from './components/EmployeeManagement';
+import OverviewPlanning from './components/OverviewPlanning';
 import StatisticsPage from './components/StatisticsPage';
 import LeaveRequestForm from './components/LeaveRequestForm';
 import AdminRequestsView from './components/AdminRequestsView';
@@ -15,8 +16,8 @@ import { loadEmployees } from './data/employeeData';
 import { useAuth } from './hooks/useAuth';
 import { firebaseService } from './firebaseService';
 
-type AdminView = 'general' | 'veilleurs' | 'cuisiniers' | 'astreintes' | 'employees' | 'statistics' | 'requests' | 'admin-requests' | 'user-management' | 'notify' | 'login';
-type EmployeeView = 'general' | 'my-planning' | 'requests' | 'login';
+type AdminView = 'general' | 'veilleurs' | 'cuisiniers' | 'astreintes' | 'overview' | 'employees' | 'statistics' | 'requests' | 'admin-requests' | 'user-management' | 'notify' | 'login';
+type EmployeeView = 'general' | 'veilleurs' | 'cuisiniers' | 'astreintes' | 'overview' | 'my-planning' | 'requests' | 'login';
 type View = AdminView | EmployeeView;
 
 function App() {
@@ -78,7 +79,7 @@ function App() {
   // Réinitialiser la vue si l'utilisateur n'a pas accès à la vue courante
   useEffect(() => {
     if (!loading && !isAdmin) {
-      const employeeOnlyViews: View[] = ['general', 'my-planning', 'requests', 'login'];
+      const employeeOnlyViews: View[] = ['general', 'veilleurs', 'cuisiniers', 'astreintes', 'overview', 'my-planning', 'requests', 'login'];
       if (!employeeOnlyViews.includes(currentView)) {
         setCurrentView('general');
       }
@@ -115,11 +116,13 @@ function App() {
   const renderView = () => {
     switch (currentView) {
       case 'veilleurs':
-        return isAdmin ? <VeilleurPlanning schoolHolidays={schoolHolidays} /> : null;
+        return <VeilleurPlanning schoolHolidays={schoolHolidays} />;
       case 'cuisiniers':
-        return isAdmin ? <CuisinierPlanning schoolHolidays={schoolHolidays} /> : null;
+        return <CuisinierPlanning schoolHolidays={schoolHolidays} />;
       case 'astreintes':
-        return isAdmin ? <AstreintePlanning schoolHolidays={schoolHolidays} /> : null;
+        return <AstreintePlanning schoolHolidays={schoolHolidays} />;
+      case 'overview':
+        return <OverviewPlanning />;
       case 'employees':
         return isAdmin ? <EmployeeManagement /> : null;
       case 'statistics':
@@ -163,26 +166,33 @@ function App() {
             </button>
           )}
 
+          <button
+            onClick={() => setCurrentView('veilleurs')}
+            className={`px-3 py-2 rounded ${currentView === 'veilleurs' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
+          >
+            Planning Veilleurs
+          </button>
+          <button
+            onClick={() => setCurrentView('cuisiniers')}
+            className={`px-3 py-2 rounded ${currentView === 'cuisiniers' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
+          >
+            Planning Cuisiniers
+          </button>
+          <button
+            onClick={() => setCurrentView('astreintes')}
+            className={`px-3 py-2 rounded ${currentView === 'astreintes' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
+          >
+            Planning Astreintes
+          </button>
+          <button
+            onClick={() => setCurrentView('overview')}
+            className={`px-3 py-2 rounded ${currentView === 'overview' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
+          >
+            Vue d'ensemble
+          </button>
+
           {isAdmin && (
             <>
-              <button
-                onClick={() => setCurrentView('veilleurs')}
-                className={`px-3 py-2 rounded ${currentView === 'veilleurs' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
-              >
-                Planning Veilleurs
-              </button>
-              <button
-                onClick={() => setCurrentView('cuisiniers')}
-                className={`px-3 py-2 rounded ${currentView === 'cuisiniers' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
-              >
-                Planning Cuisiniers
-              </button>
-              <button
-                onClick={() => setCurrentView('astreintes')}
-                className={`px-3 py-2 rounded ${currentView === 'astreintes' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
-              >
-                Planning Astreintes
-              </button>
               <button
                 onClick={() => setCurrentView('employees')}
                 className={`px-3 py-2 rounded ${currentView === 'employees' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
