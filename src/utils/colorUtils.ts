@@ -33,3 +33,18 @@ export const getContrastingTextColor = (hexColor: string): string => {
   // A common threshold is 128 (out of 255)
   return brightness > 180 ? '#000000' : '#FFFFFF'; // Use a higher threshold for better contrast with employee colors
 };
+
+/**
+ * Blends hexColor at the given alpha (0-1) over a white background and returns an opaque hex color.
+ * @param hexColor The color in hex format (e.g., "#RRGGBB").
+ * @param alpha Opacity of hexColor over white, 0-1.
+ */
+export const tintOverWhite = (hexColor: string, alpha: number): string => {
+  const clean = hexColor.startsWith('#') ? hexColor.slice(1) : hexColor;
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  const mix = (c: number) => Math.round(c * alpha + 255 * (1 - alpha));
+  const toHex = (c: number) => c.toString(16).padStart(2, '0');
+  return `#${toHex(mix(r))}${toHex(mix(g))}${toHex(mix(b))}`;
+};

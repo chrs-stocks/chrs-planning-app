@@ -439,7 +439,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
           <thead>
             <tr>
               <th className="py-2 px-4 border text-left w-16">Sem.</th>
-              <th className="py-2 px-4 border text-left w-40">Date</th>
+              <th className="py-2 px-4 border text-left w-40 sticky left-0 z-20 bg-white sticky-col">Date</th>
               {filteredEmployees.map((employee) => (
                 <th key={employee.id} className="py-2 px-4 border text-center w-40" style={{ backgroundColor: employee.color + '33' }}>{employee.name}</th>
               ))}
@@ -457,7 +457,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
                   {(isMonday || index === 0) && (
                     <td className="py-2 px-4 border text-center align-middle bg-msm-navy-light" rowSpan={daysToShow.filter(d => getISOWeek(d) === weekNumber).length}>{weekNumber}</td>
                   )}
-                  <td className={`py-2 px-4 border w-40 font-semibold ${hasError ? 'bg-red-500 text-white' : ''}`}>
+                  <td className={`py-2 px-4 border w-40 font-semibold sticky left-0 z-10 sticky-col ${hasError ? 'bg-red-500 text-white' : 'bg-white'}`}>
                     {format(day, 'dd EEEE', { locale: fr })}
                     {schoolHolidays.has(formattedDay) && <span className="ml-1">⭐</span>}
                   </td>

@@ -1,14 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getDaysInMonth, format, isFrenchPublicHoliday } from '../utils/dateUtils';
+import { format, isFrenchPublicHoliday } from '../utils/dateUtils';
 import { fr } from 'date-fns/locale';
-import { addMonths, subMonths, getISOWeek } from 'date-fns';
 import type { Shift } from '../data/shifts';
-import { getContrastingTextColor } from '../utils/colorUtils';
+import { getContrastingTextColor, tintOverWhite } from '../utils/colorUtils';
 import { ShiftSelectionModal } from './ShiftSelectionModal';
 import { SHIFT_OPTIONS, ABSENCE_OVERLAY_IDS } from '../data/shifts';
 import Notes from './Notes';
 import { loadEmployees } from '../data/employeeData';
 import { useScheduleData } from '../hooks/useScheduleData';
+import { useDayRange } from '../hooks/useDayRange';
 import { firebaseService } from '../firebaseService';
 import { useAuth } from '../hooks/useAuth';
 import type { Employee } from '../data/employeeTypes';
@@ -145,9 +145,7 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
   };
 
   const cuisiniers = allEmployees.filter(emp => (emp.plannings ?? []).includes('cuisinier') && visibleEmployeeIds.has(emp.id)).sort((a, b) => (a.order || 0) - (b.order || 0));
-  const days = getDaysInMonth(currentDate.getFullYear(), currentDate.getMonth());
-  const weeks: { [key: number]: number } = {};
-  days.forEach(day => { const w = getISOWeek(day); weeks[w] = (weeks[w] || 0) + 1; });
+  const { viewMode, setViewMode, days, weeks, goToPrev, goToNext, periodLabel } = useDayRange(currentDate, setCurrentDate);
 
   return (
     <div className="p-4 bg-white shadow-md rounded-lg relative printable-area cuisinier-planning-view">
@@ -155,14 +153,32 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
         <div className="print-title">PLANNING CUISINIERS - Cluses</div>
         <div className="print-subtitle">{format(currentDate, 'MMMM yyyy', { locale: fr })}</div>
       </div>
-      
-      <div className="flex justify-between items-center mb-4 no-print">
-        <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">Mois précédent</button>
-        <h2 className="text-2xl font-bold">{format(currentDate, 'MMMM yyyy', { locale: fr })}</h2>
-        <div className="flex space-x-2">
-          <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">Mois suivant</button>
+
+      <div className="flex flex-wrap justify-between items-center gap-2 mb-4 no-print">
+        <button onClick={goToPrev} className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
+          ← {viewMode === 'week' ? 'Sem. préc.' : 'Mois préc.'}
+        </button>
+        <div className="flex items-center gap-2 flex-wrap justify-center">
+          <h2 className="text-xl font-bold">{periodLabel}</h2>
+          <div className="flex rounded overflow-hidden border border-red-500 text-sm font-semibold">
+            <button
+              onClick={() => setViewMode('month')}
+              className={`px-4 py-2 ${viewMode === 'month' ? 'bg-red-500 text-white' : 'bg-white text-red-500 hover:bg-red-50'}`}
+            >
+              Mois
+            </button>
+            <button
+              onClick={() => setViewMode('week')}
+              className={`px-4 py-2 ${viewMode === 'week' ? 'bg-red-500 text-white' : 'bg-white text-red-500 hover:bg-red-50'}`}
+            >
+              Semaine
+            </button>
+          </div>
           <button onClick={() => window.print()} className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">Imprimer</button>
         </div>
+        <button onClick={goToNext} className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">
+          {viewMode === 'week' ? 'Sem. suiv.' : 'Mois suiv.'} →
+        </button>
       </div>
 
       <div className="flex flex-wrap items-center gap-4 mb-4 no-print bg-gray-50 p-3 rounded border border-gray-200">
@@ -181,20 +197,20 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
         <table className="min-w-full table-fixed bg-white border-collapse border border-gray-200">
           <thead>
             <tr>
-              <th className="py-2 px-4 border text-left w-40">Employé</th>
+              <th className="py-2 px-4 border text-left w-40 sticky left-0 z-20 bg-white sticky-col">Employé</th>
               {Object.keys(weeks).map(week => {
                 const w = parseInt(week);
                 return <th key={week} colSpan={weeks[w]} className="py-2 px-1 border text-center text-xs" style={{ backgroundColor: w % 2 === 0 ? '#E0F2FE' : '#EEF2FF' }}>Sem. {week}</th>;
               })}
             </tr>
             <tr>
-              <th className="py-2 px-4 border text-left w-40"></th>
+              <th className="py-2 px-4 border text-left w-40 sticky left-0 z-20 bg-white sticky-col"></th>
               {days.map(day => (
                 <th key={format(day, 'yyyy-MM-dd')} className="py-2 px-1 border text-center text-xs" style={{ backgroundColor: day.getDay() === 0 ? '#E0E0E0' : 'transparent' }}>{['D', 'L', 'M', 'M', 'J', 'V', 'S'][day.getDay()]}</th>
               ))}
             </tr>
             <tr>
-              <th className="py-2 px-4 border text-left w-40"></th>
+              <th className="py-2 px-4 border text-left w-40 sticky left-0 z-20 bg-white sticky-col"></th>
               {days.map(day => {
                 const formattedDay = format(day, 'yyyy-MM-dd');
                 const isHoliday = isFrenchPublicHoliday(day);
@@ -206,7 +222,7 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
           <tbody>
             {cuisiniers.map((employee) => (
               <tr key={employee.id}>
-                <td className="py-2 px-4 border w-40 font-semibold" style={{ backgroundColor: employee.color + '33' }}>{employee.name}</td>
+                <td className="py-2 px-4 border w-40 font-semibold sticky left-0 z-10 sticky-col" style={{ backgroundColor: tintOverWhite(employee.color, 0.2) }}>{employee.name}</td>
                 {days.map(day => {
                   const formattedDay = format(day, 'yyyy-MM-dd');
                   const dayData = schedule.get(employee.id)?.get(formattedDay);

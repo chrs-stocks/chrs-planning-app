@@ -28,7 +28,7 @@ interface ShiftSelectionModalProps {
   isHoliday?: boolean;
 }
 
-type ModalStep = 'select' | 'confirm-week' | 'thursday-pick' | 'confirm-overlay-week';
+type ModalStep = 'select' | 'confirm-week' | 'thursday-pick' | 'confirm-overlay-week' | 'overlay-duration';
 
 const THURSDAY_SHIFTS: Shift[] = [
   { id: 'thu-extended', name: 'Matin étendu', time: '09:00-16:00', type: 'morning', color: '#FFDDC1', textColor: '#333333' },
@@ -56,6 +56,7 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
 }) => {
   const [customTimeInput, setCustomTimeInput] = useState('');
   const [customOverlayInput, setCustomOverlayInput] = useState('');
+  const [overlayDurationInput, setOverlayDurationInput] = useState('');
   const [assignedPersonInitials, setAssignedPersonInitials] = useState('');
   const [step, setStep] = useState<ModalStep>('select');
   const [pendingShift, setPendingShift] = useState<Shift | null>(null);
@@ -72,6 +73,7 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
       setPendingShift(null);
       setCustomTimeInput('');
       setCustomOverlayInput('');
+      setOverlayDurationInput('');
     }
   }, [isOpen]);
 
@@ -117,7 +119,15 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
     } else {
       onSelectShift(overlay, true, assignedPersonInitials);
       setCustomOverlayInput('');
+      onClose();
     }
+  };
+
+  const handleOverlayDurationSubmit = () => {
+    const duration = overlayDurationInput.trim();
+    if (!duration || !pendingShift) return;
+    onSelectShift({ ...pendingShift, time: duration }, true, assignedPersonInitials);
+    onClose();
   };
 
   const handleCustomShiftSubmit = () => {
@@ -175,6 +185,8 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
     ? 'Horaire du jeudi'
     : step === 'confirm-overlay-week'
     ? 'Ajouter à la semaine ?'
+    : step === 'overlay-duration'
+    ? `Durée — ${pendingShift?.name ?? ''}`
     : `Horaire — ${date}`;
 
   return (
@@ -265,11 +277,15 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
                         className={`p-2 rounded text-left text-sm transition-all ${active ? 'ring-2 ring-green-500' : 'hover:opacity-80'}`}
                         style={{ backgroundColor: shift.color, color: shift.textColor || '#000' }}
                         onClick={() => {
-                          if (showWeekApply && onApplyOverlayToWeek && !active) {
+                          if (!active && shift.promptDuration) {
+                            setPendingShift(shift);
+                            setStep('overlay-duration');
+                          } else if (showWeekApply && onApplyOverlayToWeek && !active) {
                             setPendingShift(shift);
                             setStep('confirm-overlay-week');
                           } else {
                             onSelectShift(shift, true, assignedPersonInitials);
+                            onClose();
                           }
                         }}
                       >
@@ -373,9 +389,34 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
               </button>
               <button
                 className="p-3 bg-gray-200 text-gray-800 rounded font-bold hover:bg-gray-300 text-sm"
-                onClick={() => { onSelectShift(pendingShift, true, assignedPersonInitials); setStep('select'); }}
+                onClick={() => { onSelectShift(pendingShift, true, assignedPersonInitials); onClose(); }}
               >
                 Ce jour seulement
+              </button>
+            </div>
+            <button className="w-full text-xs text-gray-400 underline" onClick={() => setStep('select')}>← Retour</button>
+          </>
+        )}
+
+        {/* ── STEP: overlay-duration ──────────────────────────── */}
+        {step === 'overlay-duration' && pendingShift && (
+          <>
+            <div className="rounded p-3 text-center" style={{ backgroundColor: pendingShift.color, color: pendingShift.textColor }}>
+              <div className="font-bold">{pendingShift.name}</div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Durée (horaire libre) :</label>
+              <input
+                type="text"
+                autoFocus
+                placeholder="ex: 7h ou 09:00-16:00"
+                className="w-full p-2 border rounded text-sm mb-2"
+                value={overlayDurationInput}
+                onChange={e => setOverlayDurationInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleOverlayDurationSubmit()}
+              />
+              <button className="w-full p-2 rounded text-sm bg-msm-navy text-white hover:bg-msm-navy-dark" onClick={handleOverlayDurationSubmit}>
+                Valider
               </button>
             </div>
             <button className="w-full text-xs text-gray-400 underline" onClick={() => setStep('select')}>← Retour</button>

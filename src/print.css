@@ -51,6 +51,13 @@
     overflow: visible !important;
   }
 
+  /* Sécurité : neutralise le position:sticky des colonnes de repère
+     (nom employé / date) pendant l'impression, au cas où le navigateur
+     le conserverait malgré l'overflow forcé à visible ci-dessus. */
+  .sticky-col {
+    position: static !important;
+  }
+
   table {
     width: 100% !important;
     border-collapse: collapse !important;

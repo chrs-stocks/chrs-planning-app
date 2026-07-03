@@ -10,6 +10,7 @@ export interface Shift {
   shortCode?: string; // Short code for overlays
   isOverlay?: boolean; // Flag to identify overlay shifts
   interimInitials?: string; // New: Initials of the interim person
+  promptDuration?: boolean; // If true, selecting this overlay asks for a duration (horaire libre) before applying
 }
 
 export const SHIFT_OPTIONS: Shift[] = [
@@ -30,7 +31,8 @@ export const SHIFT_OPTIONS: Shift[] = [
   { id: 'veilleur-day', name: 'Jour', time: '12h', type: 'veilleur-day', color: '#A2D9CE', textColor: '#333333' }, // Light Teal
   { id: 'veilleur-night', name: 'Nuit', time: '12h', type: 'veilleur-night', color: '#5DADE2', textColor: '#FFFFFF' }, // Blue
   { id: 'veilleur-off', name: 'Repos', time: '0h', type: 'veilleur-off', color: '#D3D3D3', textColor: '#333333' }, // Light Gray
-  { id: 'veilleur-app', name: 'APP', time: '7h', type: 'overlay', color: '#FFC0CB', textColor: '#333333', shortCode: 'APP', isOverlay: true }, // Pink - Now an overlay
+  { id: 'veilleur-app', name: 'APP', time: '', type: 'overlay', color: '#FFC0CB', textColor: '#333333', shortCode: 'APP', isOverlay: true, promptDuration: true }, // Pink - Now an overlay
+  { id: 'veilleur-training', name: 'Formation', time: '', type: 'overlay', color: '#FFD700', textColor: '#333333', shortCode: 'F', isOverlay: true, promptDuration: true },
   // Cuisinier Shifts
   { id: 'cuisinier-7h', name: '7h', time: '7h', type: 'cuisinier-7h', color: '#F7DC6F', textColor: '#333333' }, // Yellow
   { id: 'cuisinier-3h', name: '3h', time: '3h', type: 'cuisinier-3h', color: '#F1948A', textColor: '#333333' }, // Salmon
