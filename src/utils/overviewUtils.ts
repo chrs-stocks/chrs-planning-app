@@ -16,6 +16,7 @@ const SHIFT_ID_TO_SEGMENT: Partial<Record<string, DaySegment>> = {
   'thu-extended': 'Matin',
   'thu-meeting': 'Matin',
   'afternoon': 'Après-midi',
+  'afternoon-1300': 'Après-midi',
   'meeting-afternoon': 'Après-midi',
   'day': 'Journée',
   'dorine-day': 'Journée',

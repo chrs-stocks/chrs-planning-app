@@ -4,6 +4,9 @@ import {
 import { db } from './firebaseClient';
 import type { Employee } from './data/employeeTypes';
 import type { Shift } from './data/shifts';
+import type { CalendarEvent } from './data/eventTypes';
+import type { Resident } from './data/residentTypes';
+import type { RecurringTask } from './data/taskTypes';
 
 export interface FirebaseSchedule {
   employee_id: string;
@@ -32,6 +35,11 @@ export interface UserProfile {
   role: 'admin' | 'employee';
   email: string;
 }
+
+// Firestore rejette les valeurs `undefined` (ex. champs optionnels d'un formulaire non remplis) :
+// on les retire avant écriture plutôt que d'obliger chaque appelant à le faire.
+const stripUndefined = <T extends object>(obj: T): T =>
+  Object.fromEntries(Object.entries(obj).filter(([, v]) => v !== undefined)) as T;
 
 export const firebaseService = {
   // Employees
@@ -165,5 +173,115 @@ export const firebaseService = {
 
   async deleteUser(email: string) {
     await deleteDoc(doc(db, 'users', email));
+  },
+
+  // Events
+  async getEvents(): Promise<CalendarEvent[]> {
+    const snapshot = await getDocs(collection(db, 'events'));
+    return snapshot.docs
+      .map(d => ({ id: d.id, ...d.data() } as CalendarEvent))
+      .sort((a, b) => a.startDate.localeCompare(b.startDate));
+  },
+
+  // Écoute temps réel (voir subscribeToSchedules ci-dessus) : évite qu'un remontage de vue
+  // juste après une modification n'écrase l'affichage avec une donnée pas encore confirmée.
+  subscribeToEvents(onData: (events: CalendarEvent[]) => void): () => void {
+    return onSnapshot(
+      collection(db, 'events'),
+      snapshot => onData(
+        snapshot.docs
+          .map(d => ({ id: d.id, ...d.data() } as CalendarEvent))
+          .sort((a, b) => a.startDate.localeCompare(b.startDate))
+      ),
+      error => console.error('Erreur de synchronisation des événements :', error)
+    );
+  },
+
+  async createEvent(event: Omit<CalendarEvent, 'id'>): Promise<string> {
+    const ref = await addDoc(collection(db, 'events'), stripUndefined(event));
+    return ref.id;
+  },
+
+  // setDoc avec spread de l'objet complet (jamais de liste de champs explicite) :
+  // un champ ajouté plus tard à CalendarEvent ne doit pas risquer d'être oublié ici.
+  async saveEvent(event: CalendarEvent) {
+    const { id, ...data } = event;
+    await setDoc(doc(db, 'events', id), stripUndefined(data));
+  },
+
+  async deleteEvent(id: string) {
+    await deleteDoc(doc(db, 'events', id));
+  },
+
+  // Residents
+  // ID auto-généré Firestore (addDoc) plutôt qu'un slug du nom : plusieurs résidents
+  // partagent le même nom de famille, un slug provoquerait des collisions.
+  async getResidents(): Promise<Resident[]> {
+    const snapshot = await getDocs(collection(db, 'residents'));
+    return snapshot.docs
+      .map(d => ({ id: d.id, ...d.data() } as Resident))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  },
+
+  subscribeToResidents(onData: (residents: Resident[]) => void): () => void {
+    return onSnapshot(
+      collection(db, 'residents'),
+      snapshot => onData(
+        snapshot.docs
+          .map(d => ({ id: d.id, ...d.data() } as Resident))
+          .sort((a, b) => a.name.localeCompare(b.name))
+      ),
+      error => console.error('Erreur de synchronisation des résidents :', error)
+    );
+  },
+
+  async createResident(resident: Omit<Resident, 'id'>): Promise<string> {
+    const ref = await addDoc(collection(db, 'residents'), stripUndefined(resident));
+    return ref.id;
+  },
+
+  async saveResident(resident: Resident) {
+    const { id, ...data } = resident;
+    await setDoc(doc(db, 'residents', id), stripUndefined(data));
+  },
+
+  async deleteResident(id: string) {
+    await deleteDoc(doc(db, 'residents', id));
+  },
+
+  // Tasks (tâches récurrentes)
+  async getTasks(): Promise<RecurringTask[]> {
+    const snapshot = await getDocs(collection(db, 'tasks'));
+    return snapshot.docs
+      .map(d => ({ id: d.id, ...d.data() } as RecurringTask))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  },
+
+  subscribeToTasks(onData: (tasks: RecurringTask[]) => void): () => void {
+    return onSnapshot(
+      collection(db, 'tasks'),
+      snapshot => onData(
+        snapshot.docs
+          .map(d => ({ id: d.id, ...d.data() } as RecurringTask))
+          .sort((a, b) => a.name.localeCompare(b.name))
+      ),
+      error => console.error('Erreur de synchronisation des tâches :', error)
+    );
+  },
+
+  async createTask(task: Omit<RecurringTask, 'id'>): Promise<string> {
+    const ref = await addDoc(collection(db, 'tasks'), stripUndefined(task));
+    return ref.id;
+  },
+
+  // setDoc avec spread de l'objet complet (jamais de liste de champs explicite) :
+  // un champ ajouté plus tard à RecurringTask ne doit pas risquer d'être oublié ici.
+  async saveTask(task: RecurringTask) {
+    const { id, ...data } = task;
+    await setDoc(doc(db, 'tasks', id), stripUndefined(data));
+  },
+
+  async deleteTask(id: string) {
+    await deleteDoc(doc(db, 'tasks', id));
   },
 };

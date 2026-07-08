@@ -10,14 +10,20 @@ import LeaveRequestForm from './components/LeaveRequestForm';
 import AdminRequestsView from './components/AdminRequestsView';
 import UserManagement from './components/UserManagement';
 import NotificationSender from './components/NotificationSender';
+import EventsView from './components/EventsView';
+import TasksView from './components/TasksView';
+import ResidentManagement from './components/ResidentManagement';
 import Login from './components/Login';
+import NavDropdown from './components/NavDropdown';
+import { getEventUrgency } from './utils/eventUtils';
+import { getTaskDueUrgency } from './utils/taskUtils';
 import { getFrenchSchoolHolidays } from './utils/dateUtils';
 import { loadEmployees } from './data/employeeData';
 import { useAuth } from './hooks/useAuth';
 import { firebaseService } from './firebaseService';
 
-type AdminView = 'general' | 'veilleurs' | 'cuisiniers' | 'astreintes' | 'overview' | 'employees' | 'statistics' | 'requests' | 'admin-requests' | 'user-management' | 'notify' | 'login';
-type EmployeeView = 'general' | 'veilleurs' | 'cuisiniers' | 'astreintes' | 'overview' | 'my-planning' | 'requests' | 'login';
+type AdminView = 'general' | 'veilleurs' | 'cuisiniers' | 'astreintes' | 'overview' | 'events' | 'tasks' | 'residents' | 'employees' | 'statistics' | 'requests' | 'admin-requests' | 'user-management' | 'notify' | 'login';
+type EmployeeView = 'general' | 'veilleurs' | 'cuisiniers' | 'astreintes' | 'overview' | 'events' | 'tasks' | 'my-planning' | 'requests' | 'login';
 type View = AdminView | EmployeeView;
 
 function App() {
@@ -25,6 +31,8 @@ function App() {
   const [schoolHolidays, setSchoolHolidays] = useState<Set<string>>(new Set());
   const { user, isAdmin, loading, profileName, pendingEmailLink, signingIn, linkSignInError, confirmEmailLinkSignIn } = useAuth();
   const [exporting, setExporting] = useState(false);
+  const [eventsUrgentCount, setEventsUrgentCount] = useState(0);
+  const [tasksUrgentCount, setTasksUrgentCount] = useState(0);
 
   const handleExportData = async () => {
     setExporting(true);
@@ -66,6 +74,30 @@ function App() {
     }
   }, []);
 
+  // Compteurs de notification pour les onglets Événements/Tâches : ne compte que
+  // les éléments "en retard" ou "à traiter aujourd'hui" (pas "bientôt", pour éviter le bruit).
+  useEffect(() => {
+    if (!user) return;
+    const unsubscribe = firebaseService.subscribeToEvents(events => {
+      setEventsUrgentCount(events.filter(e => {
+        const urgency = getEventUrgency(e);
+        return urgency === 'retard' || urgency === 'aujourdhui';
+      }).length);
+    });
+    return unsubscribe;
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    const unsubscribe = firebaseService.subscribeToTasks(tasks => {
+      setTasksUrgentCount(tasks.filter(t => {
+        const urgency = getTaskDueUrgency(t);
+        return urgency === 'retard' || urgency === 'aujourdhui';
+      }).length);
+    });
+    return unsubscribe;
+  }, [user]);
+
   useEffect(() => {
     const fetchHolidays = async () => {
       const currentYear = new Date().getFullYear();
@@ -79,7 +111,7 @@ function App() {
   // Réinitialiser la vue si l'utilisateur n'a pas accès à la vue courante
   useEffect(() => {
     if (!loading && !isAdmin) {
-      const employeeOnlyViews: View[] = ['general', 'veilleurs', 'cuisiniers', 'astreintes', 'overview', 'my-planning', 'requests', 'login'];
+      const employeeOnlyViews: View[] = ['general', 'veilleurs', 'cuisiniers', 'astreintes', 'overview', 'events', 'tasks', 'my-planning', 'requests', 'login'];
       if (!employeeOnlyViews.includes(currentView)) {
         setCurrentView('general');
       }
@@ -123,6 +155,12 @@ function App() {
         return <AstreintePlanning schoolHolidays={schoolHolidays} />;
       case 'overview':
         return <OverviewPlanning />;
+      case 'events':
+        return <EventsView />;
+      case 'tasks':
+        return <TasksView />;
+      case 'residents':
+        return isAdmin ? <ResidentManagement /> : null;
       case 'employees':
         return isAdmin ? <EmployeeManagement /> : null;
       case 'statistics':
@@ -150,98 +188,66 @@ function App() {
       <nav className="bg-msm-navy text-white p-4 no-print">
         <div className="container mx-auto flex flex-wrap justify-center gap-2">
 
-          <button
-            onClick={() => setCurrentView('general')}
-            className={`px-3 py-2 rounded ${currentView === 'general' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
-          >
-            Planning Général
-          </button>
+          <NavDropdown
+            label="📅 Plannings"
+            buttonClassName={`px-4 py-2.5 rounded-md text-base font-bold shadow-sm ${
+              ['general', 'my-planning', 'veilleurs', 'cuisiniers', 'astreintes', 'overview'].includes(currentView)
+                ? 'bg-msm-sky-dark text-white'
+                : 'bg-msm-sky hover:bg-msm-sky-dark text-white'
+            }`}
+            items={[
+              { key: 'general', label: 'Planning Général', onClick: () => setCurrentView('general'), isActive: currentView === 'general' },
+              ...(!isAdmin ? [{ key: 'my-planning', label: 'Mon Planning', onClick: () => setCurrentView('my-planning'), isActive: currentView === 'my-planning' }] : []),
+              { key: 'veilleurs', label: 'Planning Veilleurs', onClick: () => setCurrentView('veilleurs'), isActive: currentView === 'veilleurs' },
+              { key: 'cuisiniers', label: 'Planning Cuisiniers', onClick: () => setCurrentView('cuisiniers'), isActive: currentView === 'cuisiniers' },
+              { key: 'astreintes', label: 'Planning Astreintes', onClick: () => setCurrentView('astreintes'), isActive: currentView === 'astreintes' },
+              { key: 'overview', label: "Vue d'ensemble", onClick: () => setCurrentView('overview'), isActive: currentView === 'overview' },
+            ]}
+          />
 
-          {!isAdmin && (
-            <button
-              onClick={() => setCurrentView('my-planning')}
-              className={`px-3 py-2 rounded ${currentView === 'my-planning' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
-            >
-              Mon Planning
-            </button>
-          )}
-
           <button
-            onClick={() => setCurrentView('veilleurs')}
-            className={`px-3 py-2 rounded ${currentView === 'veilleurs' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
+            onClick={() => setCurrentView('events')}
+            className={`relative px-3 py-2 rounded ${currentView === 'events' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
           >
-            Planning Veilleurs
+            Événements
+            {eventsUrgentCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 bg-red-600 text-white text-xs font-bold rounded-full min-w-[1.25rem] h-5 px-1 flex items-center justify-center">
+                {eventsUrgentCount}
+              </span>
+            )}
           </button>
           <button
-            onClick={() => setCurrentView('cuisiniers')}
-            className={`px-3 py-2 rounded ${currentView === 'cuisiniers' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
+            onClick={() => setCurrentView('tasks')}
+            className={`relative px-3 py-2 rounded ${currentView === 'tasks' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
           >
-            Planning Cuisiniers
+            Tâches
+            {tasksUrgentCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 bg-red-600 text-white text-xs font-bold rounded-full min-w-[1.25rem] h-5 px-1 flex items-center justify-center">
+                {tasksUrgentCount}
+              </span>
+            )}
           </button>
-          <button
-            onClick={() => setCurrentView('astreintes')}
-            className={`px-3 py-2 rounded ${currentView === 'astreintes' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
-          >
-            Planning Astreintes
-          </button>
-          <button
-            onClick={() => setCurrentView('overview')}
-            className={`px-3 py-2 rounded ${currentView === 'overview' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
-          >
-            Vue d'ensemble
-          </button>
-
-          {isAdmin && (
-            <>
-              <button
-                onClick={() => setCurrentView('employees')}
-                className={`px-3 py-2 rounded ${currentView === 'employees' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
-              >
-                Gestion Employés
-              </button>
-              <button
-                onClick={() => setCurrentView('statistics')}
-                className={`px-3 py-2 rounded ${currentView === 'statistics' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
-              >
-                Statistiques
-              </button>
-              <button
-                onClick={() => setCurrentView('user-management')}
-                className={`px-3 py-2 rounded ${currentView === 'user-management' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
-              >
-                Gestion Accès
-              </button>
-              <button
-                onClick={() => setCurrentView('notify')}
-                className={`px-3 py-2 rounded ${currentView === 'notify' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
-              >
-                Notifier l'équipe
-              </button>
-              <button
-                onClick={handleExportData}
-                disabled={exporting}
-                title="Télécharger une sauvegarde complète de toutes les données"
-                className="px-3 py-2 rounded bg-green-700 hover:bg-green-800 text-white text-sm font-semibold disabled:opacity-50"
-              >
-                {exporting ? '⏳ Export...' : '💾 Sauvegarder'}
-              </button>
-            </>
-          )}
 
           <button
             onClick={() => setCurrentView('requests')}
-            className={`px-3 py-2 rounded font-bold ${currentView === 'requests' ? 'bg-msm-sky-dark' : 'bg-msm-sky hover:bg-msm-sky-dark'}`}
+            className={`px-3 py-2 rounded ${currentView === 'requests' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
           >
             Faire une demande
           </button>
 
           {isAdmin && (
-            <button
-              onClick={() => setCurrentView('admin-requests')}
-              className={`px-3 py-2 rounded font-bold ${currentView === 'admin-requests' ? 'bg-msm-red-dark' : 'bg-msm-red hover:bg-msm-red-dark animate-pulse'}`}
-            >
-              Gestion Demandes
-            </button>
+            <NavDropdown
+              label="Administration"
+              items={[
+                { key: 'employees', label: 'Gestion Employés', onClick: () => setCurrentView('employees'), isActive: currentView === 'employees' },
+                { key: 'residents', label: 'Résidents', onClick: () => setCurrentView('residents'), isActive: currentView === 'residents' },
+                { key: 'statistics', label: 'Statistiques', onClick: () => setCurrentView('statistics'), isActive: currentView === 'statistics' },
+                { key: 'user-management', label: 'Gestion Accès', onClick: () => setCurrentView('user-management'), isActive: currentView === 'user-management' },
+                { key: 'notify', label: "Notifier l'équipe", onClick: () => setCurrentView('notify'), isActive: currentView === 'notify' },
+                { key: 'admin-requests', label: 'Gestion Demandes', onClick: () => setCurrentView('admin-requests'), isActive: currentView === 'admin-requests', className: 'text-red-600 font-semibold' },
+                { key: 'export', label: exporting ? '⏳ Export...' : '💾 Sauvegarder', onClick: handleExportData, isActive: false },
+              ]}
+            />
           )}
 
           <button

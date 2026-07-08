@@ -48,8 +48,9 @@ const parseTimeRanges = (time: string): Array<[number, number]> => {
 
 // Un shift couvre une plage donnée si un de ses segments horaires la couvre entièrement.
 // On se base d'abord sur les identifiants connus (rapide, fiable), et on retombe sur une
-// analyse du champ `time` pour les horaires personnalisés (ex: "13:00-20:00" saisi
-// librement), afin de ne pas signaler une fausse alerte quand la couverture est en fait bonne.
+// analyse du champ `time` pour les horaires personnalisés (ex: "13:30-20:30" saisi
+// librement par un intérim), afin de ne pas signaler une fausse alerte quand la couverture
+// est en fait bonne.
 const shiftCoversRange = (shift: Shift, rangeStart: number, rangeEnd: number): boolean =>
   parseTimeRanges(shift.time).some(([s, e]) => s <= rangeStart && e >= rangeEnd);
 
@@ -57,15 +58,18 @@ const shiftCoversRange = (shift: Shift, rangeStart: number, rangeEnd: number): b
 const coversMorning = (shift: Shift) =>
   ['morning', 'day'].includes(shift.id) || shiftCoversRange(shift, 7 * 60, 13 * 60);
 
-// Shift couvre la plage après-midi (≤ 13h → ≥ 19h)
+// Shift couvre la plage après-midi (≤ 13h30 → ≥ 19h). Le seuil de départ est 13h30 (et non
+// 13h) depuis que l'horaire après-midi de référence est 13:30-20:30 : un intérim saisissant
+// librement "13:30-20:30" (ou tout horaire commençant à 13h30 au plus tard) doit être compté,
+// tout comme l'ancien horaire 13:00-20:00 qui reste valable.
 const coversAfternoon = (shift: Shift) =>
-  ['afternoon', 'day'].includes(shift.id) || shiftCoversRange(shift, 13 * 60, 19 * 60);
+  ['afternoon', 'afternoon-1300', 'day'].includes(shift.id) || shiftCoversRange(shift, 13 * 60 + 30, 19 * 60);
 
-// Shift couvre 16h-20h (présence soir) : après-midi classique (13:00-20:00),
+// Shift couvre 16h-20h (présence soir) : après-midi (13:30-20:30 ou l'ancien 13:00-20:00),
 // "Matin + soir" du jeudi (09:00-12:00 / 16:00-20:00), ou tout horaire personnalisé
 // couvrant réellement ce créneau.
 const coversEvening = (shift: Shift) =>
-  shift.id === 'afternoon' || shift.id === 'thu-split' || shiftCoversRange(shift, 16 * 60, 20 * 60);
+  shift.id === 'afternoon' || shift.id === 'afternoon-1300' || shift.id === 'thu-split' || shiftCoversRange(shift, 16 * 60, 20 * 60);
 
 // Salarié en repos (vendredi avant weekend)
 const isOffDay = (data: DayData | undefined): boolean => {
@@ -168,7 +172,7 @@ export const validateSchedules = (
         } else if (!hasAfternoon) {
           notes.push({
             date: ds,
-            message: `${disp} : personne en horaire après-midi (13h-20h) — créneau 13h-19h non couvert.`,
+            message: `${disp} : personne en horaire après-midi (13h30-20h30) — créneau 13h30-19h non couvert.`,
             severity: 'error',
           });
         }

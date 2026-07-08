@@ -187,7 +187,7 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
       onClose();
       return;
     }
-    if (pendingShift.id === 'afternoon') {
+    if (pendingShift.id === 'afternoon' || pendingShift.id === 'afternoon-1300') {
       setStep('thursday-pick');
     } else {
       // morning/day/other: Thursday gets same shift
@@ -377,7 +377,7 @@ export const ShiftSelectionModal: React.FC<ShiftSelectionModalProps> = ({
             </div>
             <p className="text-sm text-gray-700">
               Appliquer cet horaire à <strong>toute la semaine</strong> (lundi au vendredi) ?
-              {pendingShift.id === 'afternoon' && (
+              {(pendingShift.id === 'afternoon' || pendingShift.id === 'afternoon-1300') && (
                 <span className="block mt-1 text-xs text-gray-500">Le jeudi sera traité séparément.</span>
               )}
             </p>

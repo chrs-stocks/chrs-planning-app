@@ -11,3 +11,6 @@ dist
 *.local
 dist-ssr
 *.prev
+
+# Données sensibles (résidents) : jamais sur le dépôt public
+liste_usagers.xls

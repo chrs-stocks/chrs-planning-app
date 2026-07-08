@@ -15,7 +15,8 @@ export interface Shift {
 
 export const SHIFT_OPTIONS: Shift[] = [
   { id: 'morning', name: 'Matin', time: '06:45-13:45', type: 'morning', color: '#FFDDC1', textColor: '#333333' }, // Light Peach -> Dark Gray
-  { id: 'afternoon', name: 'Après-midi', time: '13:00-20:00', type: 'afternoon', color: '#B0E0E6', textColor: '#333333' }, // Powder Blue -> Dark Gray
+  { id: 'afternoon', name: 'Après-midi', time: '13:30-20:30', type: 'afternoon', color: '#B0E0E6', textColor: '#333333' }, // Powder Blue -> Dark Gray. Nouvelle norme à partir du lundi 13/07/2026.
+  { id: 'afternoon-1300', name: 'Après-midi (ancien 13h-20h)', time: '13:00-20:00', type: 'afternoon', color: '#B0E0E6', textColor: '#333333' }, // Ancien horaire, conservé au cas où mais plus la norme.
   { id: 'day', name: 'Journée 12h', time: '07:00-19:00', type: 'day', color: '#DDA0DD', textColor: '#333333' }, // Plum -> Dark Gray
   { id: 'dorine-day', name: 'Journée Dorine', time: '08:30-15:30', type: 'day', color: '#DDA0DD', textColor: '#333333' }, // Dorine's specific day shift
   { id: 'meeting-morning', name: 'Réunion Matin', time: '09:00-13:00', type: 'meeting-morning', color: '#ADD8E6', textColor: '#333333' }, // Light Blue -> Dark Gray

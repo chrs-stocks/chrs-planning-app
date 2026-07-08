@@ -224,7 +224,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
 
     const thursdayDs = format(thursday, 'yyyy-MM-dd');
     const thursdayData = schedule.get(selectedEmployeeId)?.get(thursdayDs);
-    if (thursdayData?.primaryShift?.id === 'afternoon') {
+    if (thursdayData?.primaryShift?.id === 'afternoon' || thursdayData?.primaryShift?.id === 'afternoon-1300') {
       setAlertCells(prev => new Set([...prev, `${selectedEmployeeId}_${thursdayDs}`]));
     }
   };
@@ -331,7 +331,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
 
   // Shifts pertinents pour le planning général (hors veilleur/cuisinier/astreinte)
   const GENERAL_SHIFT_IDS = new Set([
-    'morning', 'afternoon', 'day', 'dorine-day', 'meeting-morning', 'off', 'recovery', 'training-week',
+    'morning', 'afternoon', 'afternoon-1300', 'day', 'dorine-day', 'meeting-morning', 'off', 'recovery', 'training-week',
   ]);
   const generalShiftOptions = SHIFT_OPTIONS.filter(s => GENERAL_SHIFT_IDS.has(s.id) || !!s.isOverlay);
 
