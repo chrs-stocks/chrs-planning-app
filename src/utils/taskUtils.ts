@@ -1,35 +1,9 @@
-import { addDays, addMonths, addYears, differenceInCalendarDays, getDay, parseISO, setDate, setMonth, startOfDay } from 'date-fns';
+import { addDays, addMonths, addYears, getDay, isSameDay, setDate, setMonth, startOfDay } from 'date-fns';
 import type { RecurringTask } from '../data/taskTypes';
 
-const nextOccurrence = (from: Date, task: RecurringTask): Date => {
+// Première occurrence de la tâche à partir de (et y compris) `from`.
+const firstOccurrenceOnOrAfter = (from: Date, task: RecurringTask): Date => {
   const base = startOfDay(from);
-  switch (task.frequency) {
-    case 'quotidienne':
-      return addDays(base, 1);
-    case 'hebdomadaire': {
-      const targetWeekday = task.weekday ?? 1;
-      let d = addDays(base, 1);
-      while (getDay(d) !== targetWeekday) d = addDays(d, 1);
-      return d;
-    }
-    case 'mensuelle': {
-      let d = addMonths(base, 1);
-      d = setDate(d, task.dayOfMonth ?? 1);
-      return d;
-    }
-    case 'annuelle': {
-      let d = addYears(base, 1);
-      d = setMonth(d, (task.annualMonth ?? 1) - 1);
-      d = setDate(d, task.annualDay ?? 1);
-      return d;
-    }
-  }
-};
-
-// Première échéance après la création : peut tomber le jour même si le jour de la semaine
-// (ou du mois/de l'année) correspond déjà, contrairement à nextOccurrence qui avance toujours d'au moins un jour.
-const firstDueDate = (createdAt: Date, task: RecurringTask): Date => {
-  const base = startOfDay(createdAt);
   switch (task.frequency) {
     case 'quotidienne':
       return base;
@@ -50,33 +24,37 @@ const firstDueDate = (createdAt: Date, task: RecurringTask): Date => {
   }
 };
 
-export const computeNextDueDate = (task: RecurringTask): Date => {
-  if (!task.lastCompletion) return firstDueDate(parseISO(task.createdAt), task);
-  return nextOccurrence(parseISO(task.lastCompletion.date), task);
+const nextPeriodStep = (from: Date, task: RecurringTask): Date => {
+  switch (task.frequency) {
+    case 'quotidienne':
+      return addDays(from, 1);
+    case 'hebdomadaire':
+      return addDays(from, 7);
+    case 'mensuelle':
+      return setDate(addMonths(from, 1), task.dayOfMonth ?? 1);
+    case 'annuelle':
+      return setDate(setMonth(addYears(from, 1), (task.annualMonth ?? 1) - 1), task.annualDay ?? 1);
+  }
 };
 
-export type TaskUrgency = 'retard' | 'aujourdhui' | 'bientot';
+// Échéance calculée sur le motif de récurrence pur (jour de semaine/du mois/de l'année),
+// toujours ancrée sur aujourd'hui — indépendante de tout historique de réalisation.
+export const computeNextDueDate = (task: RecurringTask): Date =>
+  firstOccurrenceOnOrAfter(new Date(), task);
 
-// Seuil "à faire prochainement" : échéance dans les 3 jours calendaires à venir.
-const SOON_THRESHOLD_DAYS = 3;
+export const isTaskDueToday = (task: RecurringTask): boolean =>
+  task.active && isSameDay(computeNextDueDate(task), new Date());
 
-export const getTaskDueUrgency = (task: RecurringTask): TaskUrgency | null => {
-  if (!task.active) return null;
-  const diff = differenceInCalendarDays(computeNextDueDate(task), startOfDay(new Date()));
-  if (diff < 0) return 'retard';
-  if (diff === 0) return 'aujourdhui';
-  if (diff <= SOON_THRESHOLD_DAYS) return 'bientot';
-  return null;
-};
-
-export const TASK_URGENCY_LABELS: Record<TaskUrgency, string> = {
-  retard: 'En retard',
-  aujourdhui: "À faire aujourd'hui",
-  bientot: 'À faire prochainement',
-};
-
-export const TASK_URGENCY_COLORS: Record<TaskUrgency, string> = {
-  retard: 'bg-red-100 text-red-800',
-  aujourdhui: 'bg-yellow-100 text-yellow-800',
-  bientot: 'bg-blue-100 text-blue-800',
+// Toutes les occurrences de la tâche comprises dans [rangeStart, rangeEnd] (bornes incluses),
+// utilisé pour la vue calendrier mensuelle.
+export const getTaskOccurrencesInRange = (task: RecurringTask, rangeStart: Date, rangeEnd: Date): Date[] => {
+  const start = startOfDay(rangeStart);
+  const end = startOfDay(rangeEnd);
+  const occurrences: Date[] = [];
+  let d = firstOccurrenceOnOrAfter(start, task);
+  while (d <= end) {
+    occurrences.push(d);
+    d = nextPeriodStep(d, task);
+  }
+  return occurrences;
 };

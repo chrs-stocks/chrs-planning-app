@@ -12,7 +12,7 @@ interface TaskFormModalProps {
   onClose: () => void;
 }
 
-type FormState = Omit<RecurringTask, 'id' | 'lastCompletion' | 'history' | 'createdAt' | 'createdBy' | 'updatedAt'>;
+type FormState = Omit<RecurringTask, 'id' | 'createdAt' | 'createdBy' | 'updatedAt'>;
 
 const emptyForm: FormState = {
   name: '',
@@ -71,7 +71,7 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({ task, residents, employee
       const now = new Date().toISOString();
       const fullTask: RecurringTask = task
         ? { ...task, ...form }
-        : { ...form, id: '', history: [], createdAt: now };
+        : { ...form, id: '', createdAt: now };
       await onSave(fullTask);
       onClose();
     } catch (error) {

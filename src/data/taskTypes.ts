@@ -17,6 +17,22 @@ export const TASK_CATEGORY_LABELS: Record<TaskCategory, string> = {
   autre: 'Autre',
 };
 
+export const TASK_CATEGORY_COLORS: Record<TaskCategory, string> = {
+  securite: 'bg-red-100 text-red-800',
+  hygiene_entretien: 'bg-green-100 text-green-800',
+  vehicules: 'bg-blue-100 text-blue-800',
+  batiment: 'bg-amber-100 text-amber-800',
+  autre: 'bg-gray-100 text-gray-800',
+};
+
+export const TASK_CATEGORY_DOT_COLORS: Record<TaskCategory, string> = {
+  securite: 'bg-red-500',
+  hygiene_entretien: 'bg-green-500',
+  vehicules: 'bg-blue-500',
+  batiment: 'bg-amber-500',
+  autre: 'bg-gray-500',
+};
+
 export const WEEKDAY_LABELS: Record<number, string> = {
   0: 'Dimanche',
   1: 'Lundi',
@@ -35,11 +51,6 @@ export interface TaskAssignee {
   name: string;
 }
 
-export interface TaskCompletion {
-  date: string;
-  by: string;
-}
-
 export interface RecurringTask {
   id: string;
   name: string;
@@ -51,8 +62,6 @@ export interface RecurringTask {
   annualMonth?: number; // 1-12, utilisé si frequency === 'annuelle'
   annualDay?: number; // 1-31, utilisé si frequency === 'annuelle'
   assignees: TaskAssignee[];
-  lastCompletion?: TaskCompletion;
-  history: TaskCompletion[];
   notes?: string;
   active: boolean;
   createdAt: string;

@@ -16,7 +16,7 @@ import ResidentManagement from './components/ResidentManagement';
 import Login from './components/Login';
 import NavDropdown from './components/NavDropdown';
 import { getEventUrgency } from './utils/eventUtils';
-import { getTaskDueUrgency } from './utils/taskUtils';
+import { isTaskDueToday } from './utils/taskUtils';
 import { getFrenchSchoolHolidays } from './utils/dateUtils';
 import { loadEmployees } from './data/employeeData';
 import { useAuth } from './hooks/useAuth';
@@ -74,8 +74,9 @@ function App() {
     }
   }, []);
 
-  // Compteurs de notification pour les onglets Événements/Tâches : ne compte que
-  // les éléments "en retard" ou "à traiter aujourd'hui" (pas "bientôt", pour éviter le bruit).
+  // Compteur de notification pour l'onglet Événements : ne compte que les éléments
+  // "en retard" ou "à traiter aujourd'hui" (pas "bientôt", pour éviter le bruit).
+  // Les tâches récurrentes n'ont pas de notion de retard (voir isTaskDueToday) : seul "dû aujourd'hui" est compté.
   useEffect(() => {
     if (!user) return;
     const unsubscribe = firebaseService.subscribeToEvents(events => {
@@ -90,10 +91,7 @@ function App() {
   useEffect(() => {
     if (!user) return;
     const unsubscribe = firebaseService.subscribeToTasks(tasks => {
-      setTasksUrgentCount(tasks.filter(t => {
-        const urgency = getTaskDueUrgency(t);
-        return urgency === 'retard' || urgency === 'aujourdhui';
-      }).length);
+      setTasksUrgentCount(tasks.filter(isTaskDueToday).length);
     });
     return unsubscribe;
   }, [user]);
