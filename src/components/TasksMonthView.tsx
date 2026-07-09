@@ -62,21 +62,25 @@ const TasksMonthView: React.FC<TasksMonthViewProps> = ({ tasks, onSelectTask }) 
           return (
             <div
               key={key}
-              className={`bg-white min-h-[6.5rem] p-1 flex flex-col gap-1 ${isSameMonth(day, currentDate) ? '' : 'bg-gray-50 text-gray-400'}`}
+              className={`bg-white min-h-[8rem] p-1 flex flex-col gap-1 ${isSameMonth(day, currentDate) ? '' : 'bg-gray-50 text-gray-400'}`}
             >
               <span className={`text-xs font-semibold ${isToday(day) ? 'inline-flex items-center justify-center w-5 h-5 rounded-full bg-msm-navy text-white' : ''}`}>
                 {format(day, 'd')}
               </span>
-              <div className="flex flex-col gap-0.5 overflow-y-auto">
+              <div className="flex flex-col gap-1 overflow-y-auto">
                 {dayTasks.map(task => (
                   <button
                     key={task.id}
                     onClick={() => onSelectTask(task.id)}
-                    title={task.assignees.map(a => a.name).join(', ') || 'Aucun assigné'}
-                    className="text-left text-[11px] leading-tight px-1 py-0.5 rounded hover:bg-gray-100 flex items-center gap-1"
+                    className="text-left text-[11px] leading-tight px-1 py-0.5 rounded hover:bg-gray-100"
                   >
-                    <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${TASK_CATEGORY_DOT_COLORS[task.category]}`} />
-                    <span className="truncate">{task.name}</span>
+                    <div className="flex items-center gap-1">
+                      <span className={`shrink-0 w-1.5 h-1.5 rounded-full ${TASK_CATEGORY_DOT_COLORS[task.category]}`} />
+                      <span className="truncate font-medium">{task.name}</span>
+                    </div>
+                    <div className="truncate text-gray-500 pl-2.5">
+                      {task.assignees.length > 0 ? task.assignees.map(a => a.name).join(', ') : 'Aucun assigné'}
+                    </div>
                   </button>
                 ))}
               </div>
