@@ -11,7 +11,17 @@ import { TASK_CATEGORY_COLORS, TASK_CATEGORY_LABELS, TASK_FREQUENCY_LABELS } fro
 import { computeNextDueDate } from '../utils/taskUtils';
 import TaskFormModal from './TaskFormModal';
 import TaskDetailModal from './TaskDetailModal';
-import TasksMonthView from './TasksMonthView';
+import TasksCalendarView from './TasksCalendarView';
+import type { CalendarMode } from './TasksCalendarView';
+
+type DisplayMode = 'liste' | CalendarMode;
+
+const DISPLAY_MODE_LABELS: Record<DisplayMode, string> = {
+  liste: 'Liste',
+  jour: 'Jour',
+  semaine: 'Semaine',
+  mois: 'Mois',
+};
 
 const TasksView: React.FC = () => {
   const { user, profileName } = useAuth();
@@ -23,7 +33,7 @@ const TasksView: React.FC = () => {
   const [categoryFilter, setCategoryFilter] = useState<TaskCategory | 'all'>('all');
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [formTask, setFormTask] = useState<RecurringTask | null | 'new'>(null);
-  const [displayMode, setDisplayMode] = useState<'liste' | 'calendrier'>('liste');
+  const [displayMode, setDisplayMode] = useState<DisplayMode>('liste');
 
   const currentUserName = profileName || user?.email || 'Utilisateur';
 
@@ -107,23 +117,20 @@ const TasksView: React.FC = () => {
           </select>
         </div>
         <div className="flex rounded overflow-hidden border border-msm-navy text-sm font-semibold">
-          <button
-            onClick={() => setDisplayMode('liste')}
-            className={`px-4 py-2 ${displayMode === 'liste' ? 'bg-msm-navy text-white' : 'bg-white text-msm-navy hover:bg-msm-navy-light'}`}
-          >
-            Liste
-          </button>
-          <button
-            onClick={() => setDisplayMode('calendrier')}
-            className={`px-4 py-2 ${displayMode === 'calendrier' ? 'bg-msm-navy text-white' : 'bg-white text-msm-navy hover:bg-msm-navy-light'}`}
-          >
-            Calendrier
-          </button>
+          {(Object.keys(DISPLAY_MODE_LABELS) as DisplayMode[]).map(mode => (
+            <button
+              key={mode}
+              onClick={() => setDisplayMode(mode)}
+              className={`px-4 py-2 ${displayMode === mode ? 'bg-msm-navy text-white' : 'bg-white text-msm-navy hover:bg-msm-navy-light'}`}
+            >
+              {DISPLAY_MODE_LABELS[mode]}
+            </button>
+          ))}
         </div>
       </div>
 
-      {displayMode === 'calendrier' ? (
-        <TasksMonthView tasks={filteredTasks} onSelectTask={setSelectedTaskId} />
+      {displayMode !== 'liste' ? (
+        <TasksCalendarView tasks={filteredTasks} mode={displayMode} onSelectTask={setSelectedTaskId} />
       ) : sortedTasks.length === 0 ? (
         <p className="text-gray-500 italic">Aucune tâche ne correspond aux filtres sélectionnés.</p>
       ) : (
