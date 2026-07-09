@@ -26,8 +26,32 @@ const nextOccurrence = (from: Date, task: RecurringTask): Date => {
   }
 };
 
+// Première échéance après la création : peut tomber le jour même si le jour de la semaine
+// (ou du mois/de l'année) correspond déjà, contrairement à nextOccurrence qui avance toujours d'au moins un jour.
+const firstDueDate = (createdAt: Date, task: RecurringTask): Date => {
+  const base = startOfDay(createdAt);
+  switch (task.frequency) {
+    case 'quotidienne':
+      return base;
+    case 'hebdomadaire': {
+      const targetWeekday = task.weekday ?? 1;
+      let d = base;
+      while (getDay(d) !== targetWeekday) d = addDays(d, 1);
+      return d;
+    }
+    case 'mensuelle': {
+      const d = setDate(base, task.dayOfMonth ?? 1);
+      return d < base ? setDate(addMonths(base, 1), task.dayOfMonth ?? 1) : d;
+    }
+    case 'annuelle': {
+      const d = setDate(setMonth(base, (task.annualMonth ?? 1) - 1), task.annualDay ?? 1);
+      return d < base ? setDate(setMonth(addYears(base, 1), (task.annualMonth ?? 1) - 1), task.annualDay ?? 1) : d;
+    }
+  }
+};
+
 export const computeNextDueDate = (task: RecurringTask): Date => {
-  if (!task.lastCompletion) return startOfDay(parseISO(task.createdAt));
+  if (!task.lastCompletion) return firstDueDate(parseISO(task.createdAt), task);
   return nextOccurrence(parseISO(task.lastCompletion.date), task);
 };
 
