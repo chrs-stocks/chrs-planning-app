@@ -179,7 +179,7 @@ export const firebaseService = {
   async getEvents(): Promise<CalendarEvent[]> {
     const snapshot = await getDocs(collection(db, 'events'));
     return snapshot.docs
-      .map(d => ({ id: d.id, ...d.data() } as CalendarEvent))
+      .map(d => ({ ...d.data(), id: d.id } as CalendarEvent))
       .sort((a, b) => a.startDate.localeCompare(b.startDate));
   },
 
@@ -190,15 +190,19 @@ export const firebaseService = {
       collection(db, 'events'),
       snapshot => onData(
         snapshot.docs
-          .map(d => ({ id: d.id, ...d.data() } as CalendarEvent))
+          .map(d => ({ ...d.data(), id: d.id } as CalendarEvent))
           .sort((a, b) => a.startDate.localeCompare(b.startDate))
       ),
       error => console.error('Erreur de synchronisation des événements :', error)
     );
   },
 
+  // id retiré explicitement : un appelant qui spread un CalendarEvent complet (id compris,
+  // cf. formulaire de création) ne doit jamais faire persister un faux champ "id" dans le document,
+  // qui écraserait l'identifiant réel (d.id) à la relecture.
   async createEvent(event: Omit<CalendarEvent, 'id'>): Promise<string> {
-    const ref = await addDoc(collection(db, 'events'), stripUndefined(event));
+    const { id: _id, ...data } = event as CalendarEvent;
+    const ref = await addDoc(collection(db, 'events'), stripUndefined(data));
     return ref.id;
   },
 
@@ -253,7 +257,7 @@ export const firebaseService = {
   async getTasks(): Promise<RecurringTask[]> {
     const snapshot = await getDocs(collection(db, 'tasks'));
     return snapshot.docs
-      .map(d => ({ id: d.id, ...d.data() } as RecurringTask))
+      .map(d => ({ ...d.data(), id: d.id } as RecurringTask))
       .sort((a, b) => a.name.localeCompare(b.name));
   },
 
@@ -262,15 +266,17 @@ export const firebaseService = {
       collection(db, 'tasks'),
       snapshot => onData(
         snapshot.docs
-          .map(d => ({ id: d.id, ...d.data() } as RecurringTask))
+          .map(d => ({ ...d.data(), id: d.id } as RecurringTask))
           .sort((a, b) => a.name.localeCompare(b.name))
       ),
       error => console.error('Erreur de synchronisation des tâches :', error)
     );
   },
 
+  // id retiré explicitement : voir createEvent ci-dessus pour la raison.
   async createTask(task: Omit<RecurringTask, 'id'>): Promise<string> {
-    const ref = await addDoc(collection(db, 'tasks'), stripUndefined(task));
+    const { id: _id, ...data } = task as RecurringTask;
+    const ref = await addDoc(collection(db, 'tasks'), stripUndefined(data));
     return ref.id;
   },
 
