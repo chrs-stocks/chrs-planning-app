@@ -113,9 +113,17 @@ const Login: React.FC<LoginProps> = ({ pendingEmailLink, signingIn, linkSignInEr
         <p className="text-gray-600 mb-2">
           Un lien de connexion a été envoyé à <strong>{email}</strong>.
         </p>
-        <p className="text-gray-500 text-sm mb-6">
-          Ouvrez votre boite mail et cliquez sur le lien pour accéder à l'application. Il est valable 1 heure.
+        <p className="text-gray-500 text-sm mb-4">
+          Ouvrez votre boite mail et cliquez sur le lien (ou le bouton) pour accéder à l'application. Il est valable 1 heure.
         </p>
+        <div className="text-left text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg p-3 mb-6">
+          <p className="font-semibold text-gray-600 mb-1">Vous ne voyez pas de lien dans l'email ?</p>
+          <ul className="list-disc list-inside space-y-0.5">
+            <li>Vérifiez le dossier indésirables / spam</li>
+            <li>Cherchez un <strong>bouton</strong> « Se connecter », certaines messageries masquent les liens texte mais gardent les boutons</li>
+            <li>Essayez d'ouvrir l'email depuis une autre application (webmail, autre téléphone)</li>
+          </ul>
+        </div>
         <button
           onClick={() => { setSent(false); setEmail(''); }}
           className="text-sm text-msm-navy underline"

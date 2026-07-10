@@ -110,11 +110,11 @@ const StatisticsPage: React.FC = () => {
     <div className="p-4 bg-white shadow-md rounded-lg">
       <h2 className="text-2xl font-bold mb-4">Statistiques des Employés</h2>
 
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex flex-wrap justify-between items-center gap-2 mb-4">
         <button onClick={goToPreviousMonth} className="px-4 py-2 bg-msm-navy text-white rounded hover:bg-msm-navy-dark">
           Mois précédent
         </button>
-        <h3 className="text-xl font-semibold">
+        <h3 className="text-xl font-semibold text-center order-last sm:order-none w-full sm:w-auto">
           Période de {format(months[0], 'MMMM yyyy', { locale: fr })} à {format(months[months.length - 1], 'MMMM yyyy', { locale: fr })}
         </h3>
         <button onClick={goToNextMonth} className="px-4 py-2 bg-msm-navy text-white rounded hover:bg-msm-navy-dark">
