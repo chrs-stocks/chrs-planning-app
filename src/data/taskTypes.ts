@@ -36,6 +36,17 @@ export const TASK_CATEGORY_DOT_COLORS: Record<TaskCategory, string> = {
   autre: 'bg-gray-500',
 };
 
+// Fond + liseré de couleur pour les cartes de tâche dans la vue liste, un jeu de
+// couleurs par catégorie (distinct des badges TASK_CATEGORY_COLORS, plus soutenus).
+export const TASK_CATEGORY_CARD_COLORS: Record<TaskCategory, string> = {
+  securite: 'bg-red-50 border-red-200 border-l-4 border-l-red-500',
+  hygiene_entretien: 'bg-green-50 border-green-200 border-l-4 border-l-green-500',
+  vehicules: 'bg-blue-50 border-blue-200 border-l-4 border-l-blue-500',
+  batiment: 'bg-amber-50 border-amber-200 border-l-4 border-l-amber-500',
+  alimentaire: 'bg-orange-50 border-orange-200 border-l-4 border-l-orange-500',
+  autre: 'bg-gray-50 border-gray-200 border-l-4 border-l-gray-400',
+};
+
 export const WEEKDAY_LABELS: Record<number, string> = {
   0: 'Dimanche',
   1: 'Lundi',

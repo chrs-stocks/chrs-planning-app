@@ -7,7 +7,7 @@ import { loadEmployees } from '../data/employeeData';
 import type { Employee } from '../data/employeeTypes';
 import type { Resident } from '../data/residentTypes';
 import type { RecurringTask, TaskCategory, TaskFrequency } from '../data/taskTypes';
-import { TASK_CATEGORY_COLORS, TASK_CATEGORY_LABELS, TASK_FREQUENCY_LABELS } from '../data/taskTypes';
+import { TASK_CATEGORY_CARD_COLORS, TASK_CATEGORY_COLORS, TASK_CATEGORY_LABELS, TASK_FREQUENCY_LABELS } from '../data/taskTypes';
 import { computeNextDueDate } from '../utils/taskUtils';
 import TaskFormModal from './TaskFormModal';
 import TaskDetailModal from './TaskDetailModal';
@@ -141,7 +141,7 @@ const TasksView: React.FC = () => {
               <button
                 key={task.id}
                 onClick={() => setSelectedTaskId(task.id)}
-                className="text-left bg-gray-50 border border-gray-200 rounded-lg p-4 hover:shadow-md hover:border-msm-sky transition-all"
+                className={`text-left border rounded-lg p-4 hover:shadow-md transition-all ${TASK_CATEGORY_CARD_COLORS[task.category]}`}
               >
                 <h3 className="font-bold text-msm-navy">{task.name}</h3>
                 <p className="text-sm text-gray-600 mt-1">
