@@ -20,6 +20,7 @@ import { isTaskDueToday } from './utils/taskUtils';
 import { getFrenchSchoolHolidays } from './utils/dateUtils';
 import { loadEmployees } from './data/employeeData';
 import { useAuth } from './hooks/useAuth';
+import { useInactivityLogout } from './hooks/useInactivityLogout';
 import { firebaseService } from './firebaseService';
 
 type AdminView = 'general' | 'veilleurs' | 'cuisiniers' | 'astreintes' | 'overview' | 'events' | 'tasks' | 'residents' | 'employees' | 'statistics' | 'requests' | 'admin-requests' | 'user-management' | 'notify' | 'login';
@@ -30,6 +31,7 @@ function App() {
   const [currentView, setCurrentView] = useState<View>('general');
   const [schoolHolidays, setSchoolHolidays] = useState<Set<string>>(new Set());
   const { user, isAdmin, loading, profileName, pendingEmailLink, signingIn, linkSignInError, confirmEmailLinkSignIn } = useAuth();
+  useInactivityLogout(user);
   const [exporting, setExporting] = useState(false);
   const [eventsUrgentCount, setEventsUrgentCount] = useState(0);
   const [tasksUrgentCount, setTasksUrgentCount] = useState(0);
