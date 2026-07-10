@@ -7,13 +7,14 @@ export const TASK_FREQUENCY_LABELS: Record<TaskFrequency, string> = {
   annuelle: 'Annuelle',
 };
 
-export type TaskCategory = 'securite' | 'hygiene_entretien' | 'vehicules' | 'batiment' | 'autre';
+export type TaskCategory = 'securite' | 'hygiene_entretien' | 'vehicules' | 'batiment' | 'alimentaire' | 'autre';
 
 export const TASK_CATEGORY_LABELS: Record<TaskCategory, string> = {
   securite: 'Sécurité',
   hygiene_entretien: 'Hygiène / Entretien',
   vehicules: 'Véhicules',
   batiment: 'Bâtiment / Technique',
+  alimentaire: 'Alimentaire',
   autre: 'Autre',
 };
 
@@ -22,6 +23,7 @@ export const TASK_CATEGORY_COLORS: Record<TaskCategory, string> = {
   hygiene_entretien: 'bg-green-100 text-green-800',
   vehicules: 'bg-blue-100 text-blue-800',
   batiment: 'bg-amber-100 text-amber-800',
+  alimentaire: 'bg-orange-100 text-orange-800',
   autre: 'bg-gray-100 text-gray-800',
 };
 
@@ -30,6 +32,7 @@ export const TASK_CATEGORY_DOT_COLORS: Record<TaskCategory, string> = {
   hygiene_entretien: 'bg-green-500',
   vehicules: 'bg-blue-500',
   batiment: 'bg-amber-500',
+  alimentaire: 'bg-orange-500',
   autre: 'bg-gray-500',
 };
 
@@ -57,7 +60,7 @@ export interface RecurringTask {
   category: TaskCategory;
   location?: string;
   frequency: TaskFrequency;
-  weekday?: number; // 0-6, utilisé si frequency === 'hebdomadaire'
+  weekdays?: number[]; // 0-6, un ou plusieurs jours, utilisé si frequency === 'hebdomadaire'
   dayOfMonth?: number; // 1-31, utilisé si frequency === 'mensuelle'
   annualMonth?: number; // 1-12, utilisé si frequency === 'annuelle'
   annualDay?: number; // 1-31, utilisé si frequency === 'annuelle'

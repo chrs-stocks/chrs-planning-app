@@ -3,6 +3,7 @@ import type { RecurringTask, TaskAssignee, TaskCategory, TaskFrequency } from '.
 import { TASK_CATEGORY_LABELS, TASK_FREQUENCY_LABELS, WEEKDAY_LABELS } from '../data/taskTypes';
 import type { Resident } from '../data/residentTypes';
 import type { Employee } from '../data/employeeTypes';
+import { normalizeWeekdays } from '../utils/taskUtils';
 
 interface TaskFormModalProps {
   task: RecurringTask | null; // null = création
@@ -19,7 +20,7 @@ const emptyForm: FormState = {
   category: 'autre',
   location: '',
   frequency: 'quotidienne',
-  weekday: 1,
+  weekdays: [1],
   dayOfMonth: 1,
   annualMonth: 1,
   annualDay: 1,
@@ -36,7 +37,7 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({ task, residents, employee
     category: task.category,
     location: task.location ?? '',
     frequency: task.frequency,
-    weekday: task.weekday ?? 1,
+    weekdays: normalizeWeekdays(task),
     dayOfMonth: task.dayOfMonth ?? 1,
     annualMonth: task.annualMonth ?? 1,
     annualDay: task.annualDay ?? 1,
@@ -63,9 +64,22 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({ task, residents, employee
   const isChecked = (type: TaskAssignee['type'], id: string) =>
     form.assignees.some(a => a.type === type && a.id === id);
 
+  const toggleWeekday = (day: number) => {
+    setForm(prev => {
+      const weekdays = prev.weekdays?.includes(day)
+        ? prev.weekdays.filter(d => d !== day)
+        : [...(prev.weekdays ?? []), day].sort();
+      return { ...prev, weekdays };
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (form.name.trim() === '') return;
+    if (form.frequency === 'hebdomadaire' && (!form.weekdays || form.weekdays.length === 0)) {
+      alert('Sélectionnez au moins un jour de la semaine.');
+      return;
+    }
     setIsSubmitting(true);
     try {
       const now = new Date().toISOString();
@@ -145,16 +159,29 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({ task, residents, employee
 
           {form.frequency === 'hebdomadaire' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700">Jour de la semaine</label>
-              <select
-                value={form.weekday}
-                onChange={e => update('weekday', Number(e.target.value))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border"
-              >
-                {Object.entries(WEEKDAY_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </select>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Jour(s) de la semaine</label>
+              <div className="flex flex-wrap gap-2">
+                {Object.entries(WEEKDAY_LABELS).map(([value, label]) => {
+                  const day = Number(value);
+                  const checked = form.weekdays?.includes(day) ?? false;
+                  return (
+                    <label
+                      key={value}
+                      className={`flex items-center gap-1.5 text-sm px-2.5 py-1.5 rounded-md border cursor-pointer ${
+                        checked ? 'bg-msm-navy-light border-msm-navy text-msm-navy font-semibold' : 'border-gray-300 text-gray-700'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() => toggleWeekday(day)}
+                        className="rounded"
+                      />
+                      {label}
+                    </label>
+                  );
+                })}
+              </div>
             </div>
           )}
 

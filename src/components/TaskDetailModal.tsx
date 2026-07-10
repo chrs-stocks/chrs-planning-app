@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import type { RecurringTask } from '../data/taskTypes';
 import { TASK_CATEGORY_COLORS, TASK_CATEGORY_LABELS, TASK_FREQUENCY_LABELS, WEEKDAY_LABELS } from '../data/taskTypes';
-import { computeNextDueDate } from '../utils/taskUtils';
+import { computeNextDueDate, normalizeWeekdays } from '../utils/taskUtils';
 
 interface TaskDetailModalProps {
   task: RecurringTask;
@@ -15,7 +15,7 @@ interface TaskDetailModalProps {
 const scheduleDescription = (task: RecurringTask): string => {
   switch (task.frequency) {
     case 'hebdomadaire':
-      return `${TASK_FREQUENCY_LABELS[task.frequency]} — ${WEEKDAY_LABELS[task.weekday ?? 1]}`;
+      return `${TASK_FREQUENCY_LABELS[task.frequency]} — ${normalizeWeekdays(task).map(d => WEEKDAY_LABELS[d]).join(', ')}`;
     case 'mensuelle':
       return `${TASK_FREQUENCY_LABELS[task.frequency]} — le ${task.dayOfMonth ?? 1}`;
     case 'annuelle':
