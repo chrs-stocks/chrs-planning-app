@@ -144,7 +144,7 @@ const AstreintePlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
     }
   };
 
-  const astreintes = allEmployees.filter(emp => (emp.plannings ?? []).includes('astreinte') && visibleEmployeeIds.has(emp.id)).sort((a, b) => (a.order || 0) - (b.order || 0));
+  const astreintes = allEmployees.filter(emp => (emp.plannings ?? []).includes('astreinte') && !emp.archived && visibleEmployeeIds.has(emp.id)).sort((a, b) => (a.order || 0) - (b.order || 0));
 
   const { viewMode, setViewMode, days, weeks, goToPrev, goToNext, periodLabel } = useDayRange(currentDate, setCurrentDate);
 

@@ -19,6 +19,9 @@ const EmployeeManagement: React.FC = () => {
     name: '', type: 'general', color: '#CCCCCC', workingHoursPercentage: 100, order: 0, plannings: ['general'], nonWorkingDays: []
   });
   const [editingEmployeeId, setEditingEmployeeId] = useState<string | null>(null);
+  const [archivingId, setArchivingId] = useState<string | null>(null);
+  const [archiveEndDate, setArchiveEndDate] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
 
   useEffect(() => {
     const init = async () => {
@@ -115,10 +118,33 @@ const EmployeeManagement: React.FC = () => {
   };
 
   const handleDeleteEmployee = async (id: string) => {
-    if (!window.confirm('Supprimer cet employé ?')) return;
+    if (!window.confirm('Supprimer définitivement cet employé et son historique ? Pour une fin de contrat, préférez "Archiver".')) return;
     const updated = reindex(employees.filter(emp => emp.id !== id));
     setEmployees(updated);
     await firebaseService.deleteEmployee(id);
+    await saveEmployees(updated);
+  };
+
+  const handleStartArchive = (id: string) => {
+    setArchivingId(id);
+    setArchiveEndDate(new Date().toISOString().slice(0, 10));
+  };
+
+  const handleConfirmArchive = async (id: string) => {
+    if (!archiveEndDate) return;
+    const updated = employees.map(emp =>
+      emp.id === id ? { ...emp, archived: true, endDate: archiveEndDate } : emp
+    );
+    setEmployees(updated);
+    await saveEmployees(updated);
+    setArchivingId(null);
+  };
+
+  const handleReactivateEmployee = async (id: string) => {
+    const updated = employees.map(emp =>
+      emp.id === id ? { ...emp, archived: false } : emp
+    );
+    setEmployees(updated);
     await saveEmployees(updated);
   };
 
@@ -186,6 +212,11 @@ const EmployeeManagement: React.FC = () => {
         </div>
       </div>
 
+      <label className="flex items-center gap-2 text-sm text-gray-600 mb-2 cursor-pointer">
+        <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="rounded" />
+        <span>Afficher les employés archivés (fin de contrat)</span>
+      </label>
+
       <div className="overflow-x-auto">
         <table className="min-w-full border-collapse">
           <thead>
@@ -200,8 +231,11 @@ const EmployeeManagement: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {employees.map((emp, index) => (
-              <tr key={emp.id} className="hover:bg-gray-50">
+            {employees
+              .map((emp, index) => ({ emp, index }))
+              .filter(({ emp }) => showArchived || !emp.archived)
+              .map(({ emp, index }) => (
+              <tr key={emp.id} className={`hover:bg-gray-50 ${emp.archived ? 'opacity-50' : ''}`}>
                 <td className="p-2 border text-center">
                   <div className="flex justify-center gap-1">
                     <button
@@ -218,7 +252,14 @@ const EmployeeManagement: React.FC = () => {
                     >↓</button>
                   </div>
                 </td>
-                <td className="p-2 border font-bold">{emp.name}</td>
+                <td className="p-2 border font-bold">
+                  {emp.name}
+                  {emp.archived && (
+                    <span className="block text-xs font-normal text-gray-500">
+                      Archivé{emp.endDate ? ` — fin le ${new Date(emp.endDate).toLocaleDateString('fr-FR')}` : ''}
+                    </span>
+                  )}
+                </td>
                 <td className="p-2 border italic text-sm">{emp.type}</td>
                 <td className="p-2 border text-sm">
                   <div className="flex flex-wrap gap-1">
@@ -230,8 +271,28 @@ const EmployeeManagement: React.FC = () => {
                 <td className="p-2 border text-center"><div className="w-8 h-4 mx-auto rounded" style={{ backgroundColor: emp.color }}></div></td>
                 <td className="p-2 border text-center">{emp.workingHoursPercentage}%</td>
                 <td className="p-2 border text-right space-x-2">
-                  <button onClick={() => handleEditEmployee(emp.id)} className="text-msm-navy underline text-sm">Modifier</button>
-                  <button onClick={() => handleDeleteEmployee(emp.id)} className="text-red-600 underline text-sm">Supprimer</button>
+                  {archivingId === emp.id ? (
+                    <span className="inline-flex items-center gap-1">
+                      <input
+                        type="date"
+                        value={archiveEndDate}
+                        onChange={e => setArchiveEndDate(e.target.value)}
+                        className="p-1 border rounded text-sm"
+                      />
+                      <button onClick={() => handleConfirmArchive(emp.id)} className="text-msm-navy underline text-sm">Confirmer</button>
+                      <button onClick={() => setArchivingId(null)} className="text-gray-500 underline text-sm">Annuler</button>
+                    </span>
+                  ) : (
+                    <>
+                      <button onClick={() => handleEditEmployee(emp.id)} className="text-msm-navy underline text-sm">Modifier</button>
+                      {emp.archived ? (
+                        <button onClick={() => handleReactivateEmployee(emp.id)} className="text-green-700 underline text-sm">Réactiver</button>
+                      ) : (
+                        <button onClick={() => handleStartArchive(emp.id)} className="text-amber-700 underline text-sm">Archiver</button>
+                      )}
+                      <button onClick={() => handleDeleteEmployee(emp.id)} className="text-red-600 underline text-sm">Supprimer</button>
+                    </>
+                  )}
                 </td>
               </tr>
             ))}

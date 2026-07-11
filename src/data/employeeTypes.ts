@@ -20,4 +20,6 @@ export interface Employee {
   order?: number; // Nouveau : pour définir l'ordre des colonnes
   plannings?: PlanningKey[]; // Planning(s) affecté(s) — voir normalizeEmployee pour la migration
   nonWorkingDays?: number[]; // Jours de la semaine jamais travaillés (0=dim … 6=sam) : pas d'alerte "jour non rempli" ces jours-là
+  archived?: boolean; // Fin de contrat : masqué des plannings/assignations actifs, données historiques conservées
+  endDate?: string; // Date de fin de contrat (yyyy-MM-dd), renseignée à l'archivage
 }

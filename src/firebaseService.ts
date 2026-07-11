@@ -62,6 +62,8 @@ export const firebaseService = {
           order: emp.order ?? 0,
           plannings: emp.plannings ?? [],
           nonWorkingDays: emp.nonWorkingDays ?? [],
+          archived: emp.archived ?? false,
+          endDate: emp.endDate ?? null,
         })
       )
     );

@@ -250,7 +250,7 @@ const TaskFormModal: React.FC<TaskFormModalProps> = ({ task, residents, employee
               <div>
                 <p className="text-xs font-semibold text-gray-600 mb-1">Salariés</p>
                 <div className="max-h-40 overflow-y-auto border rounded p-2 space-y-1">
-                  {employees.map(emp => (
+                  {employees.filter(emp => !emp.archived || isChecked('employee', emp.id)).map(emp => (
                     <label key={emp.id} className="flex items-center space-x-2 text-sm cursor-pointer">
                       <input
                         type="checkbox"

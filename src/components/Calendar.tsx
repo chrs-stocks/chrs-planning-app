@@ -326,7 +326,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
     : format(currentDate, 'MMMM yyyy', { locale: fr });
 
   const filteredEmployees = allEmployees.filter(emp => {
-    return (emp.plannings ?? []).includes('general') && visibleEmployeeIds.has(emp.id);
+    return (emp.plannings ?? []).includes('general') && !emp.archived && visibleEmployeeIds.has(emp.id);
   }).sort((a, b) => (a.order || 0) - (b.order || 0));
 
   // Shifts pertinents pour le planning général (hors veilleur/cuisinier/astreinte)
@@ -415,7 +415,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
           <span className="font-semibold text-msm-navy">Filtrer Colonnes :</span>
           <div className="flex flex-wrap gap-2">
             {allEmployees
-              .filter(e => (e.plannings ?? []).includes('general'))
+              .filter(e => (e.plannings ?? []).includes('general') && !e.archived)
               .sort((a, b) => (a.order || 0) - (b.order || 0))
               .map(emp => (
               <label key={emp.id} className="flex items-center space-x-1 bg-white px-2 py-1 rounded border text-sm cursor-pointer hover:bg-msm-navy-light">

@@ -147,7 +147,7 @@ const VeilleurPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHol
     }
   };
 
-  const veilleurs = allEmployees.filter(emp => (emp.plannings ?? []).includes('veilleur') && visibleEmployeeIds.has(emp.id)).sort((a, b) => {
+  const veilleurs = allEmployees.filter(emp => (emp.plannings ?? []).includes('veilleur') && !emp.archived && visibleEmployeeIds.has(emp.id)).sort((a, b) => {
     if (a.id === 'veilleur-interim') return 1;
     if (b.id === 'veilleur-interim') return -1;
     return (a.order || 0) - (b.order || 0);
@@ -192,7 +192,7 @@ const VeilleurPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHol
       <div className="flex flex-wrap items-center gap-4 mb-4 no-print bg-gray-50 p-3 rounded border border-gray-200">
         <span className="font-semibold text-msm-navy">Filtrer Veilleurs :</span>
         <div className="flex flex-wrap gap-2">
-          {allEmployees.filter(e => (e.plannings ?? []).includes('veilleur')).map(emp => (
+          {allEmployees.filter(e => (e.plannings ?? []).includes('veilleur') && !e.archived).map(emp => (
             <label key={emp.id} className="flex items-center space-x-1 bg-white px-2 py-1 rounded border text-sm cursor-pointer hover:bg-msm-navy-light">
               <input type="checkbox" checked={visibleEmployeeIds.has(emp.id)} onChange={() => toggleEmployeeVisibility(emp.id)} className="rounded" />
               <span>{emp.name}</span>

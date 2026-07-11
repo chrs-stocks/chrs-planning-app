@@ -173,7 +173,7 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
     });
   };
 
-  const cuisiniers = allEmployees.filter(emp => (emp.plannings ?? []).includes('cuisinier') && visibleEmployeeIds.has(emp.id)).sort((a, b) => (a.order || 0) - (b.order || 0));
+  const cuisiniers = allEmployees.filter(emp => (emp.plannings ?? []).includes('cuisinier') && !emp.archived && visibleEmployeeIds.has(emp.id)).sort((a, b) => (a.order || 0) - (b.order || 0));
   const { viewMode, setViewMode, days, weeks, goToPrev, goToNext, periodLabel } = useDayRange(currentDate, setCurrentDate);
 
   return (
@@ -213,7 +213,7 @@ const CuisinierPlanning: React.FC<{ schoolHolidays: Set<string> }> = ({ schoolHo
       <div className="flex flex-wrap items-center gap-4 mb-4 no-print bg-gray-50 p-3 rounded border border-gray-200">
         <span className="font-semibold text-msm-navy">Filtrer Cuisiniers :</span>
         <div className="flex flex-wrap gap-2">
-          {allEmployees.filter(e => (e.plannings ?? []).includes('cuisinier')).map(emp => (
+          {allEmployees.filter(e => (e.plannings ?? []).includes('cuisinier') && !e.archived).map(emp => (
             <label key={emp.id} className="flex items-center space-x-1 bg-white px-2 py-1 rounded border text-sm cursor-pointer hover:bg-msm-navy-light">
               <input type="checkbox" checked={visibleEmployeeIds.has(emp.id)} onChange={() => toggleEmployeeVisibility(emp.id)} className="rounded" />
               <span>{emp.name}</span>

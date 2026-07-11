@@ -40,10 +40,10 @@ const OverviewPlanning: React.FC = () => {
       });
     };
 
-    collect(generalSchedule, allEmployees.filter(e => (e.plannings ?? []).includes('general')), 'Général');
-    collect(veilleurSchedule, allEmployees.filter(e => (e.plannings ?? []).includes('veilleur')), 'Veilleurs');
-    collect(cuisinierSchedule, allEmployees.filter(e => (e.plannings ?? []).includes('cuisinier')), 'Cuisine');
-    collect(astreinteSchedule, allEmployees.filter(e => (e.plannings ?? []).includes('astreinte')), 'Astreinte');
+    collect(generalSchedule, allEmployees.filter(e => (e.plannings ?? []).includes('general') && !e.archived), 'Général');
+    collect(veilleurSchedule, allEmployees.filter(e => (e.plannings ?? []).includes('veilleur') && !e.archived), 'Veilleurs');
+    collect(cuisinierSchedule, allEmployees.filter(e => (e.plannings ?? []).includes('cuisinier') && !e.archived), 'Cuisine');
+    collect(astreinteSchedule, allEmployees.filter(e => (e.plannings ?? []).includes('astreinte') && !e.archived), 'Astreinte');
 
     return result;
   };
