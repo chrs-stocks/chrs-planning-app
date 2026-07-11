@@ -64,6 +64,16 @@
     table-layout: fixed !important;
   }
 
+  /* Planning Général : le layout fixe entre en conflit avec les largeurs en %
+     du <colgroup> (Sem./Date) dès qu'il y a aussi des largeurs en px sur les
+     cellules (colonnes employés) — Chromium écrase alors les colonnes Sem./Date
+     à une largeur nulle, les rendant invisibles à l'impression. Le layout auto
+     (basé sur le contenu, toujours contraint à 100% de la largeur de page)
+     évite ce conflit et n'affecte que cette table, pas les autres plannings. */
+  .calendar-view table {
+    table-layout: auto !important;
+  }
+
   /* Hauteur de ligne fixe et identique pour toutes les cellules d'un
      même planning (dimensionnée pour absorber 2 lignes de texte —
      horaire + information superposée — sans que certaines lignes du
