@@ -7,6 +7,7 @@ import type { Shift } from './data/shifts';
 import type { CalendarEvent } from './data/eventTypes';
 import type { Resident } from './data/residentTypes';
 import type { RecurringTask } from './data/taskTypes';
+import type { ResidentAppointment } from './data/appointmentTypes';
 
 export interface FirebaseSchedule {
   employee_id: string;
@@ -291,5 +292,40 @@ export const firebaseService = {
 
   async deleteTask(id: string) {
     await deleteDoc(doc(db, 'tasks', id));
+  },
+
+  // Rendez-vous des résidents
+  async getAppointments(): Promise<ResidentAppointment[]> {
+    const snapshot = await getDocs(collection(db, 'appointments'));
+    return snapshot.docs
+      .map(d => ({ ...d.data(), id: d.id } as ResidentAppointment))
+      .sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? '').localeCompare(b.time ?? ''));
+  },
+
+  subscribeToAppointments(onData: (appointments: ResidentAppointment[]) => void): () => void {
+    return onSnapshot(
+      collection(db, 'appointments'),
+      snapshot => onData(
+        snapshot.docs
+          .map(d => ({ ...d.data(), id: d.id } as ResidentAppointment))
+          .sort((a, b) => a.date.localeCompare(b.date) || (a.time ?? '').localeCompare(b.time ?? ''))
+      ),
+      error => console.error('Erreur de synchronisation des rendez-vous :', error)
+    );
+  },
+
+  async createAppointment(appointment: Omit<ResidentAppointment, 'id'>): Promise<string> {
+    const { id: _id, ...data } = appointment as ResidentAppointment;
+    const ref = await addDoc(collection(db, 'appointments'), stripUndefined(data));
+    return ref.id;
+  },
+
+  async saveAppointment(appointment: ResidentAppointment) {
+    const { id, ...data } = appointment;
+    await setDoc(doc(db, 'appointments', id), stripUndefined(data));
+  },
+
+  async deleteAppointment(id: string) {
+    await deleteDoc(doc(db, 'appointments', id));
   },
 };

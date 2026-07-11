@@ -12,6 +12,7 @@ import UserManagement from './components/UserManagement';
 import NotificationSender from './components/NotificationSender';
 import EventsView from './components/EventsView';
 import TasksView from './components/TasksView';
+import AppointmentsView from './components/AppointmentsView';
 import ResidentManagement from './components/ResidentManagement';
 import Login from './components/Login';
 import NavDropdown from './components/NavDropdown';
@@ -23,8 +24,8 @@ import { useAuth } from './hooks/useAuth';
 import { useInactivityLogout } from './hooks/useInactivityLogout';
 import { firebaseService } from './firebaseService';
 
-type AdminView = 'general' | 'veilleurs' | 'cuisiniers' | 'astreintes' | 'overview' | 'events' | 'tasks' | 'residents' | 'employees' | 'statistics' | 'requests' | 'admin-requests' | 'user-management' | 'notify' | 'login';
-type EmployeeView = 'general' | 'veilleurs' | 'cuisiniers' | 'astreintes' | 'overview' | 'events' | 'tasks' | 'my-planning' | 'requests' | 'login';
+type AdminView = 'general' | 'veilleurs' | 'cuisiniers' | 'astreintes' | 'overview' | 'events' | 'tasks' | 'appointments' | 'residents' | 'employees' | 'statistics' | 'requests' | 'admin-requests' | 'user-management' | 'notify' | 'login';
+type EmployeeView = 'general' | 'veilleurs' | 'cuisiniers' | 'astreintes' | 'overview' | 'events' | 'tasks' | 'appointments' | 'my-planning' | 'requests' | 'login';
 type View = AdminView | EmployeeView;
 
 function App() {
@@ -35,6 +36,7 @@ function App() {
   const [exporting, setExporting] = useState(false);
   const [eventsUrgentCount, setEventsUrgentCount] = useState(0);
   const [tasksUrgentCount, setTasksUrgentCount] = useState(0);
+  const [appointmentsTodayCount, setAppointmentsTodayCount] = useState(0);
 
   const handleExportData = async () => {
     setExporting(true);
@@ -99,6 +101,15 @@ function App() {
   }, [user]);
 
   useEffect(() => {
+    if (!user) return;
+    const unsubscribe = firebaseService.subscribeToAppointments(appointments => {
+      const today = new Date().toISOString().slice(0, 10);
+      setAppointmentsTodayCount(appointments.filter(a => a.date === today).length);
+    });
+    return unsubscribe;
+  }, [user]);
+
+  useEffect(() => {
     const fetchHolidays = async () => {
       const currentYear = new Date().getFullYear();
       const holidays1 = await getFrenchSchoolHolidays(currentYear, 'Zone A');
@@ -111,7 +122,7 @@ function App() {
   // Réinitialiser la vue si l'utilisateur n'a pas accès à la vue courante
   useEffect(() => {
     if (!loading && !isAdmin) {
-      const employeeOnlyViews: View[] = ['general', 'veilleurs', 'cuisiniers', 'astreintes', 'overview', 'events', 'tasks', 'my-planning', 'requests', 'login'];
+      const employeeOnlyViews: View[] = ['general', 'veilleurs', 'cuisiniers', 'astreintes', 'overview', 'events', 'tasks', 'appointments', 'my-planning', 'requests', 'login'];
       if (!employeeOnlyViews.includes(currentView)) {
         setCurrentView('general');
       }
@@ -159,6 +170,8 @@ function App() {
         return <EventsView />;
       case 'tasks':
         return <TasksView />;
+      case 'appointments':
+        return <AppointmentsView />;
       case 'residents':
         return isAdmin ? <ResidentManagement /> : null;
       case 'employees':
@@ -224,6 +237,18 @@ function App() {
             {tasksUrgentCount > 0 && (
               <span className="absolute -top-1.5 -right-1.5 bg-red-600 text-white text-xs font-bold rounded-full min-w-[1.25rem] h-5 px-1 flex items-center justify-center">
                 {tasksUrgentCount}
+              </span>
+            )}
+          </button>
+
+          <button
+            onClick={() => setCurrentView('appointments')}
+            className={`relative px-3 py-2 rounded ${currentView === 'appointments' ? 'bg-msm-navy-dark' : 'hover:bg-msm-navy-dark'}`}
+          >
+            Rendez-vous
+            {appointmentsTodayCount > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 bg-red-600 text-white text-xs font-bold rounded-full min-w-[1.25rem] h-5 px-1 flex items-center justify-center">
+                {appointmentsTodayCount}
               </span>
             )}
           </button>
