@@ -148,6 +148,22 @@ const EmployeeManagement: React.FC = () => {
     await saveEmployees(updated);
   };
 
+  // Employés archivés dont la fin de contrat remonte à une année révolue
+  // (ex : fin de contrat en 2026 → purgeable dès le 01/01/2027).
+  const purgeCandidates = employees.filter(emp =>
+    emp.archived && emp.endDate && new Date().getFullYear() > new Date(emp.endDate).getFullYear()
+  );
+
+  const handlePurgeExpired = async () => {
+    const names = purgeCandidates.map(e => `${e.name} (fin le ${new Date(e.endDate!).toLocaleDateString('fr-FR')})`).join('\n');
+    if (!window.confirm(`Supprimer définitivement ces employés archivés depuis plus d'un an ?\n\n${names}\n\nCette action est irréversible.`)) return;
+    const idsToDelete = new Set(purgeCandidates.map(e => e.id));
+    const updated = reindex(employees.filter(emp => !idsToDelete.has(emp.id)));
+    setEmployees(updated);
+    await Promise.all(purgeCandidates.map(e => firebaseService.deleteEmployee(e.id)));
+    await saveEmployees(updated);
+  };
+
   return (
     <div className="p-4 bg-white shadow-md rounded-lg">
       <h2 className="text-2xl font-bold mb-4">Gestion des Employés</h2>
@@ -211,6 +227,18 @@ const EmployeeManagement: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {purgeCandidates.length > 0 && (
+        <div className="mb-4 p-3 bg-amber-50 border border-amber-300 rounded flex flex-wrap items-center justify-between gap-2">
+          <div className="text-sm text-amber-800">
+            <strong>{purgeCandidates.length}</strong> employé{purgeCandidates.length > 1 ? 's' : ''} archivé{purgeCandidates.length > 1 ? 's' : ''} depuis plus d'un an
+            {' '}({purgeCandidates.map(e => e.name).join(', ')}) — peuvent être supprimés définitivement.
+          </div>
+          <button onClick={handlePurgeExpired} className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded">
+            Supprimer définitivement
+          </button>
+        </div>
+      )}
 
       <label className="flex items-center gap-2 text-sm text-gray-600 mb-2 cursor-pointer">
         <input type="checkbox" checked={showArchived} onChange={e => setShowArchived(e.target.checked)} className="rounded" />
