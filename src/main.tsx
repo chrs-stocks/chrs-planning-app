@@ -24,3 +24,11 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 )
+
+// Enregistré dès le chargement (pas seulement à l'activation des rappels) : Chrome/Android
+// exigent un service worker actif pour proposer l'installation de l'app sur l'écran d'accueil.
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/firebase-messaging-sw.js').catch(console.error);
+  });
+}
