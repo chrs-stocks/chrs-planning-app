@@ -22,6 +22,7 @@ import { getFrenchSchoolHolidays } from './utils/dateUtils';
 import { loadEmployees } from './data/employeeData';
 import { useAuth } from './hooks/useAuth';
 import { useInactivityLogout } from './hooks/useInactivityLogout';
+import { usePushNotifications } from './hooks/usePushNotifications';
 import { firebaseService } from './firebaseService';
 
 type AdminView = 'general' | 'veilleurs' | 'cuisiniers' | 'astreintes' | 'overview' | 'events' | 'tasks' | 'appointments' | 'residents' | 'employees' | 'statistics' | 'requests' | 'admin-requests' | 'user-management' | 'notify' | 'login';
@@ -33,6 +34,7 @@ function App() {
   const [schoolHolidays, setSchoolHolidays] = useState<Set<string>>(new Set());
   const { user, isAdmin, loading, profileName, pendingEmailLink, signingIn, linkSignInError, confirmEmailLinkSignIn } = useAuth();
   useInactivityLogout(user);
+  const { permission: pushPermission, busy: pushBusy, enableNotifications, disableNotifications } = usePushNotifications(user?.email ?? null);
   const [exporting, setExporting] = useState(false);
   const [eventsUrgentCount, setEventsUrgentCount] = useState(0);
   const [tasksUrgentCount, setTasksUrgentCount] = useState(0);
@@ -273,6 +275,35 @@ function App() {
                 { key: 'export', label: exporting ? '⏳ Export...' : '💾 Sauvegarder', onClick: handleExportData, isActive: false },
               ]}
             />
+          )}
+
+          {pushPermission !== 'unsupported' && (
+            pushPermission === 'granted' ? (
+              <button
+                onClick={disableNotifications}
+                disabled={pushBusy}
+                title="Désactiver les rappels de rendez-vous sur cet appareil"
+                className="px-3 py-2 rounded bg-green-700 hover:bg-green-800 text-white text-sm disabled:opacity-50"
+              >
+                🔔 Rappels activés
+              </button>
+            ) : pushPermission === 'denied' ? (
+              <button
+                title="Notifications bloquées par le navigateur : autorisez-les dans les réglages du site pour recevoir les rappels de rendez-vous"
+                className="px-3 py-2 rounded bg-gray-600 text-white text-sm cursor-not-allowed"
+              >
+                🔕 Notifications bloquées
+              </button>
+            ) : (
+              <button
+                onClick={enableNotifications}
+                disabled={pushBusy}
+                title="Recevoir un rappel des rendez-vous du jour, même app fermée"
+                className="px-3 py-2 rounded bg-msm-sky hover:bg-msm-sky-dark text-white text-sm disabled:opacity-50"
+              >
+                {pushBusy ? '⏳ Activation...' : '🔔 Activer les rappels'}
+              </button>
+            )
           )}
 
           <button

@@ -328,4 +328,18 @@ export const firebaseService = {
   async deleteAppointment(id: string) {
     await deleteDoc(doc(db, 'appointments', id));
   },
+
+  // Jetons de notification push (FCM). Un document par appareil/navigateur : le token
+  // sert d'id, ce qui évite les doublons si un même appareil se réenregistre.
+  async savePushToken(token: string, userEmail: string) {
+    await setDoc(doc(db, 'pushTokens', token), {
+      token,
+      userEmail,
+      updatedAt: new Date().toISOString(),
+    });
+  },
+
+  async deletePushToken(token: string) {
+    await deleteDoc(doc(db, 'pushTokens', token));
+  },
 };
