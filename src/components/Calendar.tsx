@@ -410,7 +410,7 @@ const Calendar: React.FC<{ schoolHolidays: Set<string>, filterEmployeeName?: str
         </div>
       )}
 
-      {isAdmin && !filterEmployeeName && (
+      {!filterEmployeeName && (
         <div className="flex flex-wrap items-center gap-4 mb-4 no-print bg-gray-50 p-3 rounded border border-gray-200">
           <span className="font-semibold text-msm-navy">Filtrer Colonnes :</span>
           <div className="flex flex-wrap gap-2">
