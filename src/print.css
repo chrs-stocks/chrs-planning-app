@@ -5,7 +5,7 @@
 @media print {
   @page {
     size: landscape;
-    margin: 8mm;
+    margin: 6mm;
   }
 
   /* Cache tout ce qui n'est pas le planning (dont les notes/avertissements,
@@ -17,7 +17,7 @@
   .print-only-header {
     display: block;
     text-align: center;
-    margin-bottom: 6px;
+    margin-bottom: 2px;
     flex-shrink: 0;
   }
 
@@ -41,6 +41,7 @@
     width: 100% !important;
     max-width: 100% !important;
     height: 98vh !important;
+    padding: 2px 4px !important;
     display: flex !important;
     flex-direction: column !important;
     justify-content: center !important;
@@ -87,11 +88,17 @@
     overflow: hidden !important;
   }
 
-  /* Planning Général : jusqu'à 31 lignes (1 par jour du mois) →
-     cellules plus compactes pour tenir sur une seule page A4 */
+  /* Planning Général : jusqu'à 31 lignes (1 par jour du mois) → cellules plus
+     compactes pour tenir sur une seule page A4. `height` n'est qu'un minimum
+     pour une cellule de tableau : une case avec une info superposée sur une
+     2e ligne (ex: horaire + congé) grandit quand même au-delà de cette valeur
+     malgré `overflow:hidden` — d'où un line-height et un padding réduits ici,
+     qui limitent directement le coût réel de ces lignes à 2 niveaux de texte. */
   .calendar-view table th, .calendar-view table td {
     font-size: 6.5pt !important;
-    height: 15pt !important;
+    line-height: 1 !important;
+    padding: 0 2px !important;
+    height: 13pt !important;
   }
 
   /* Colonnes Sem./Date réduites au strict nécessaire (juste un numéro
