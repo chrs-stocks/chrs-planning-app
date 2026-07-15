@@ -121,6 +121,7 @@ const Login: React.FC<LoginProps> = ({ pendingEmailLink, signingIn, linkSignInEr
           <ul className="list-disc list-inside space-y-0.5">
             <li>Vérifiez le dossier indésirables / spam</li>
             <li>Cherchez un <strong>bouton</strong> « Se connecter », certaines messageries masquent les liens texte mais gardent les boutons</li>
+            <li>Vérifiez que l'affichage des emails au format <strong>HTML</strong> est activé dans les paramètres de votre messagerie</li>
             <li>Essayez d'ouvrir l'email depuis une autre application (webmail, autre téléphone)</li>
           </ul>
         </div>
